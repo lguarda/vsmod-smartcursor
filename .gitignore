@@ -1,5 +1,7 @@
-Release
+Releases
 CakeBuild/bin
 CakeBuild/obj
 SmartCursor/bin
 SmartCursor/obj
+.sconsign.dblite
+.sconscache.py
