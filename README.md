@@ -12,5 +12,8 @@ Once key bind is release, or pressed again if toggle key bind was used, then the
 
 The current state of this mod is "it work for me" so be careful.
 
+# Todo
+- implement a continuous mod so tool is constantly swapped against targeted block without having to cycle the hotkey
+
 ![Some action](demo/vsmod-smartcursor-demo.gif)
 ![Some action](demo/vsmod-smartcursor-demo-inventory-swap.gif)

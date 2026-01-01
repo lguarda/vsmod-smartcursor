@@ -49,12 +49,11 @@ public class SmartCursorModSystem : ModSystem {
     if (!_isSmartToolHeld) {
       return;
     }
-    var invMan = _capi.World.Player.InventoryManager;
-    int cur = invMan.ActiveHotbarSlotNumber;
+    int currentActiveSlotIndex = _capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
 
     // To avoid confusion when active bar change disable the smart tool
     // or when not in toggle mode and hotkey was released
-    if (cur != _savedActiveSlotIndex ||
+    if (currentActiveSlotIndex != _savedActiveSlotIndex ||
         (!_isToggleMode && !_capi.Input.IsHotKeyPressed(HOTKEY_SMARTCURSOR))) {
       PopTool();
     }
@@ -207,13 +206,13 @@ public class SmartCursorModSystem : ModSystem {
   private void PopTool() {
     _isSmartToolHeld = false;
     UnregisterSmartToolStopListListener();
-    IInventory backpack = _capi.World.Player.InventoryManager.GetOwnInventory(
+    IInventory inventory = _capi.World.Player.InventoryManager.GetOwnInventory(
         _savedSlotInventoryName);
     IInventory hotbar = _capi.World.Player.InventoryManager.GetOwnInventory(
         GlobalConstants.hotBarInvClassName);
 
     ItemSlot bar = hotbar[_savedActiveSlotIndex];
-    ItemSlot back = backpack[_savedSlotIndex];
+    ItemSlot back = inventory[_savedSlotIndex];
 
     SwapItemSlot(bar, back);
   }
