@@ -72,6 +72,7 @@ public class SmartCursorModSystem : ModSystem {
     }
 
     Block block = _capi.World.BlockAccessor.GetBlock(bs.Position);
+    // _capi.ShowChatMessage($"key {block.BlockMaterial}");
     switch (block.BlockMaterial) {
     case EnumBlockMaterial.Gravel:
     case EnumBlockMaterial.Sand:
@@ -85,6 +86,7 @@ public class SmartCursorModSystem : ModSystem {
     case EnumBlockMaterial.Ice:
     case EnumBlockMaterial.Glass:
     case EnumBlockMaterial.Brick:
+    case EnumBlockMaterial.Ceramic:
       return EnumTool.Pickaxe;
       break;
     case EnumBlockMaterial.Plant:
@@ -96,7 +98,6 @@ public class SmartCursorModSystem : ModSystem {
       break;
     // Liquid = 8
     // Air = 0
-    // Ceramic = 15
     // Cloth = 16
     // Fire = 19
     // Lava = 17
