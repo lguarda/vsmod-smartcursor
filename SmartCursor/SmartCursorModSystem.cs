@@ -79,7 +79,6 @@ public class SmartCursorModSystem : ModSystem {
     case EnumBlockMaterial.Snow:
     case EnumBlockMaterial.Soil:
       return EnumTool.Shovel;
-      break;
     case EnumBlockMaterial.Metal:
     case EnumBlockMaterial.Ore:
     case EnumBlockMaterial.Stone:
@@ -88,14 +87,11 @@ public class SmartCursorModSystem : ModSystem {
     case EnumBlockMaterial.Brick:
     case EnumBlockMaterial.Ceramic:
       return EnumTool.Pickaxe;
-      break;
     case EnumBlockMaterial.Plant:
       return EnumTool.Knife;
-      break;
     case EnumBlockMaterial.Wood:
     case EnumBlockMaterial.Leaves:
       return EnumTool.Axe;
-      break;
     // Liquid = 8
     // Air = 0
     // Cloth = 16
