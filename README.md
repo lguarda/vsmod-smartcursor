@@ -12,5 +12,5 @@ Once key bind is release, or pressed again if toggle key bind was used, then the
 
 The current state of this mod is "it work for me" so be careful.
 
-![Some action](./demo/vsmod-smartcursor-demo.gif)
-![Some action](./demo/vsmod-smartcursor-demo-inventory-swap.gif)
+![Some action](demo/vsmod-smartcursor-demo.gif)
+![Some action](demo/vsmod-smartcursor-demo-inventory-swap.gif)
