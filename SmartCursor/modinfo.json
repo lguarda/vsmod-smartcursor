@@ -1,0 +1,13 @@
+{
+    "type": "code",
+    "modid": "smartcursor",
+    "name": "Smart cursor",
+    "authors": [
+        "lguarda"
+    ],
+    "description": "This mod aim to implement the smartcursor feature from terraria",
+    "version": "0.0.1",
+    "dependencies": {
+        "game": ""
+    }
+}
