@@ -15,8 +15,7 @@ public class SmartCursorModSystem : ModSystem {
   int _savedActiveSlotIndex;
   bool _isSmartToolHeld;
   bool _isToggleMode;
-  int _lastActiveSlot = -1;
-  long _listener;
+  long _listener = -1;
 
   private void RegisterKey(string keyCode, GlKeys key) {
     _capi.Input.RegisterHotKey(keyCode, $"Smart cursor key: {keyCode}", key,
@@ -56,10 +55,9 @@ public class SmartCursorModSystem : ModSystem {
 
     // To avoid confusion when active bar change disable the smart tool
     // or when not in toggle mode and hotkey was released
-    if (cur != _lastActiveSlot ||
+    if (cur != _savedActiveSlotIndex ||
         (!_isToggleMode && !_capi.Input.IsHotKeyPressed(HOTKEY_SMARTCURSOR))) {
       PopTool();
-      _lastActiveSlot = cur;
     }
   }
 
@@ -112,22 +110,32 @@ public class SmartCursorModSystem : ModSystem {
     if (!mouseItemSlot.Empty) {
       return false;
     }
-    ItemStackMoveOperation op =
+
+    // I really need to find a better way to do this it's seems to work
+    // Now this two move operation are here to account for empty item slot as
+    // well as slot with multiple stack size maybe try with max stack size and
+    // call it a day?
+    ItemStackMoveOperation op_a =
         new ItemStackMoveOperation(_capi.World, EnumMouseButton.None, 0,
                                    EnumMergePriority.AutoMerge, a.StackSize);
+
+    ItemStackMoveOperation op_b =
+        new ItemStackMoveOperation(_capi.World, EnumMouseButton.None, 0,
+                                   EnumMergePriority.AutoMerge, b.StackSize);
+
     object obj = _capi.World.Player.InventoryManager.TryTransferTo(
-        a, mouseItemSlot, ref op);
+        a, mouseItemSlot, ref op_a);
     if (obj != null) {
       _capi.Network.SendPacketClient(obj);
     }
 
-    obj = _capi.World.Player.InventoryManager.TryTransferTo(b, a, ref op);
+    obj = _capi.World.Player.InventoryManager.TryTransferTo(b, a, ref op_b);
     if (obj != null) {
       _capi.Network.SendPacketClient(obj);
     }
 
     obj = _capi.World.Player.InventoryManager.TryTransferTo(mouseItemSlot, b,
-                                                            ref op);
+                                                            ref op_a);
     if (obj != null) {
       _capi.Network.SendPacketClient(obj);
     }
@@ -191,9 +199,15 @@ public class SmartCursorModSystem : ModSystem {
     return SwapTool(GlobalConstants.hotBarInvClassName, toolType, currentSlot);
   }
 
+  private void UnregisterSmartToolStopListListener() {
+    if (_listener >= 0) {
+      _capi.Event.UnregisterGameTickListener(_listener);
+      _listener = -1;
+    }
+  }
   private void PopTool() {
     _isSmartToolHeld = false;
-    _capi.Event.UnregisterGameTickListener(_listener);
+    UnregisterSmartToolStopListListener();
     IInventory backpack = _capi.World.Player.InventoryManager.GetOwnInventory(
         _savedSlotInventoryName);
     IInventory hotbar = _capi.World.Player.InventoryManager.GetOwnInventory(
@@ -202,12 +216,13 @@ public class SmartCursorModSystem : ModSystem {
     ItemSlot bar = hotbar[_savedActiveSlotIndex];
     ItemSlot back = backpack[_savedSlotIndex];
 
-    SwapItemSlot(back, bar);
+    SwapItemSlot(bar, back);
   }
 
   private void StartSmartCursor(bool mode) {
     _isToggleMode = mode;
     if (!_isSmartToolHeld) {
+      UnregisterSmartToolStopListListener();
       _listener =
           _capi.Event.RegisterGameTickListener(SmartToolStopListListener, 100);
       _isSmartToolHeld = PushTool();
