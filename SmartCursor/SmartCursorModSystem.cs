@@ -9,65 +9,69 @@ public class SmartCursorModSystem : ModSystem {
   const string HOTKEY_SMARTCURSOR = "smartcursor";
   const string HOTKEY_SMARTCURSOR_TOGGLE = "smartcursor toggle";
 
-  ICoreClientAPI capi;
-  int savedSlot;
-  string savedSlotInventory;
-  int savedActiveSlot;
-  bool smartToolHeld;
-  bool toggleMode;
-  int lastSlot = -1;
-  long listener;
+  ICoreClientAPI _capi;
+  int _savedSlotIndex;
+  string _savedSlotInventoryName;
+  int _savedActiveSlotIndex;
+  bool _isSmartToolHeld;
+  bool _isToggleMode;
+  int _lastActiveSlot = -1;
+  long _listener;
 
   private void RegisterKey(string keyCode, GlKeys key) {
-    capi.Input.RegisterHotKey(keyCode, $"Smart cursor key: {keyCode}", key,
-                              HotkeyType.GUIOrOtherControls);
-    capi.Input.SetHotKeyHandler(keyCode, (_) => true);
+    _capi.Input.RegisterHotKey(keyCode, $"Smart cursor key: {keyCode}", key,
+                               HotkeyType.GUIOrOtherControls);
+    _capi.Input.SetHotKeyHandler(keyCode, (_) => true);
   }
 
   private void HotKeyListener(string hotkeycode, KeyCombination keyComb) {
     switch (hotkeycode) {
     case HOTKEY_SMARTCURSOR:
-      SmartCursor(false);
+      StartSmartCursor(false);
       break;
     case HOTKEY_SMARTCURSOR_TOGGLE:
-      SmartCursor(true);
+      StartSmartCursor(true);
       break;
     }
   }
 
   public override void StartClientSide(ICoreClientAPI api) {
     Mod.Logger.Notification("SmartCursor starting");
-    smartToolHeld = false;
-    capi = api;
+    _isSmartToolHeld = false;
+    _capi = api;
 
-    // TODO configurable keybind
     RegisterKey(HOTKEY_SMARTCURSOR, GlKeys.R);
     RegisterKey(HOTKEY_SMARTCURSOR_TOGGLE, GlKeys.Tilde);
-    capi.Input.AddHotkeyListener(HotKeyListener);
+    _capi.Input.AddHotkeyListener(HotKeyListener);
   }
 
-  void DetectHotbarChange(float t) {
-    if (!smartToolHeld) {
+  private void SmartToolStopListListener(float t) {
+    // This should not happen but don't do anything if there's no current smart
+    // tool held
+    if (!_isSmartToolHeld) {
       return;
     }
-    var invMan = capi.World.Player.InventoryManager;
+    var invMan = _capi.World.Player.InventoryManager;
     int cur = invMan.ActiveHotbarSlotNumber;
 
-    if (cur != lastSlot ||
-        (!toggleMode && !capi.Input.IsHotKeyPressed(HOTKEY_SMARTCURSOR))) {
+    // To avoid confusion when active bar change disable the smart tool
+    // or when not in toggle mode and hotkey was released
+    if (cur != _lastActiveSlot ||
+        (!_isToggleMode && !_capi.Input.IsHotKeyPressed(HOTKEY_SMARTCURSOR))) {
       PopTool();
-      lastSlot = cur;
+      _lastActiveSlot = cur;
     }
   }
 
-  EnumTool SmartToolSelector() {
-    BlockSelection bs = capi.World.Player.CurrentBlockSelection;
+  // This function return tool based on targeted block
+  private EnumTool SmartToolSelector() {
+    BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
 
     if (bs == null) {
       return EnumTool.Sword;
     }
 
-    Block block = capi.World.BlockAccessor.GetBlock(bs.Position);
+    Block block = _capi.World.BlockAccessor.GetBlock(bs.Position);
     switch (block.BlockMaterial) {
     case EnumBlockMaterial.Gravel:
     case EnumBlockMaterial.Sand:
@@ -104,53 +108,54 @@ public class SmartCursorModSystem : ModSystem {
     }
   }
 
-  bool SwapItemSlot(ItemSlot a, ItemSlot b) {
+  private bool SwapItemSlot(ItemSlot a, ItemSlot b) {
     // Until i know how to do this properly right now i'm using the
     // mouseItemSlot as temporary item holder during the swap
-    ItemSlot mouseItemSlot = capi.World.Player.InventoryManager.MouseItemSlot;
+    ItemSlot mouseItemSlot = _capi.World.Player.InventoryManager.MouseItemSlot;
     if (!mouseItemSlot.Empty) {
       return false;
     }
     ItemStackMoveOperation op =
-        new ItemStackMoveOperation(capi.World, EnumMouseButton.None, 0,
+        new ItemStackMoveOperation(_capi.World, EnumMouseButton.None, 0,
                                    EnumMergePriority.AutoMerge, a.StackSize);
-    object obj = capi.World.Player.InventoryManager.TryTransferTo(
+    object obj = _capi.World.Player.InventoryManager.TryTransferTo(
         a, mouseItemSlot, ref op);
     if (obj != null) {
-      capi.Network.SendPacketClient(obj);
+      _capi.Network.SendPacketClient(obj);
     }
 
-    obj = capi.World.Player.InventoryManager.TryTransferTo(b, a, ref op);
+    obj = _capi.World.Player.InventoryManager.TryTransferTo(b, a, ref op);
     if (obj != null) {
-      capi.Network.SendPacketClient(obj);
+      _capi.Network.SendPacketClient(obj);
     }
 
-    obj = capi.World.Player.InventoryManager.TryTransferTo(mouseItemSlot, b,
-                                                           ref op);
+    obj = _capi.World.Player.InventoryManager.TryTransferTo(mouseItemSlot, b,
+                                                            ref op);
     if (obj != null) {
-      capi.Network.SendPacketClient(obj);
+      _capi.Network.SendPacketClient(obj);
     }
 
     return true;
   }
 
-  bool isRightTool(ItemSlot slot, EnumTool toolType) {
+  private bool IsRightTool(ItemSlot slot, EnumTool toolType) {
     EnumTool? currentTool = slot?.Itemstack?.Collectible?.Tool;
     return currentTool == toolType;
   }
 
-  int FindToolSlotInInventory(EnumTool toolType, IInventory inventory) {
+  private int FindToolSlotInInventory(EnumTool toolType, IInventory inventory) {
     for (int i = 0; i < inventory.Count; i++) {
-      if (isRightTool(inventory[i], toolType)) {
+      if (IsRightTool(inventory[i], toolType)) {
         return i;
       }
     }
     return -1;
   }
 
-  bool SwapTool(string inventoryName, EnumTool toolType, ItemSlot currentSlot) {
+  private bool SwapTool(string inventoryName, EnumTool toolType,
+                        ItemSlot currentSlot) {
     IInventory inventory =
-        capi.World.Player.InventoryManager.GetOwnInventory(inventoryName);
+        _capi.World.Player.InventoryManager.GetOwnInventory(inventoryName);
 
     int slotNumber = FindToolSlotInInventory(toolType, inventory);
 
@@ -159,50 +164,57 @@ public class SmartCursorModSystem : ModSystem {
     }
     ItemSlot slot = inventory[slotNumber];
 
-    savedSlot = slotNumber;
-    savedSlotInventory = inventoryName;
-    savedActiveSlot = capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
+    _savedSlotIndex = slotNumber;
+    _savedSlotInventoryName = inventoryName;
+    _savedActiveSlotIndex =
+        _capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
 
     bool ret = SwapItemSlot(currentSlot, slot);
 
     // TODO is this needed?
-    capi.World.Player.InventoryManager.CloseInventoryAndSync(inventory);
+    _capi.World.Player.InventoryManager.CloseInventoryAndSync(inventory);
     return ret;
   }
 
-  bool PushTool() {
-    // Mod.Logger.Notification("OMG 4 Hello from template mod client side");
-    ItemSlot currentSlot = capi.World.Player.InventoryManager.ActiveHotbarSlot;
+  private bool PushTool() {
+    ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
     EnumTool toolType = SmartToolSelector();
+
     // First Stop if the current tool is the right one
-    if (isRightTool(currentSlot, toolType)) {
+    if (IsRightTool(currentSlot, toolType)) {
       return false;
     }
+
+    // Than prioritize hotbar for tool search
     if (SwapTool(GlobalConstants.backpackInvClassName, toolType, currentSlot)) {
       return true;
     }
+
+    // When not found take the tool from backpack
     return SwapTool(GlobalConstants.hotBarInvClassName, toolType, currentSlot);
   }
 
-  void PopTool() {
-    smartToolHeld = false;
-    capi.Event.UnregisterGameTickListener(listener);
-    IInventory backpack =
-        capi.World.Player.InventoryManager.GetOwnInventory(savedSlotInventory);
-    IInventory hotbar = capi.World.Player.InventoryManager.GetOwnInventory(
+  private void PopTool() {
+    _isSmartToolHeld = false;
+    _capi.Event.UnregisterGameTickListener(_listener);
+    IInventory backpack = _capi.World.Player.InventoryManager.GetOwnInventory(
+        _savedSlotInventoryName);
+    IInventory hotbar = _capi.World.Player.InventoryManager.GetOwnInventory(
         GlobalConstants.hotBarInvClassName);
 
-    ItemSlot bar = hotbar[savedActiveSlot];
-    ItemSlot back = backpack[savedSlot];
+    ItemSlot bar = hotbar[_savedActiveSlotIndex];
+    ItemSlot back = backpack[_savedSlotIndex];
 
     SwapItemSlot(back, bar);
   }
-  void SmartCursor(bool mode) {
-    toggleMode = mode;
-    if (!smartToolHeld) {
-      listener = capi.Event.RegisterGameTickListener(DetectHotbarChange, 100);
-      smartToolHeld = PushTool();
-    } else if (toggleMode) {
+
+  private void StartSmartCursor(bool mode) {
+    _isToggleMode = mode;
+    if (!_isSmartToolHeld) {
+      _listener =
+          _capi.Event.RegisterGameTickListener(SmartToolStopListListener, 100);
+      _isSmartToolHeld = PushTool();
+    } else if (_isToggleMode) {
       PopTool();
     }
   }
