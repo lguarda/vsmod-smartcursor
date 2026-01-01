@@ -11,60 +11,49 @@ public class SmartCursorModSystem : ModSystem {
   int savedActiveSlot;
   bool toogle;
   int lastSlot = -1;
+  long listener;
 
-  // Called on server and client
-  // public override void Start(ICoreAPI api)
-  //{
-  //    Mod.Logger.Notification("Hello from template mod: " +
-  //    Lang.Get("mymodid:hello"));
-  //}
-
-  // public override void StartServerSide(ICoreServerAPI api)
-  //{
-  //     Mod.Logger.Notification("Hello from template mod server side");
-  // }
-
-  // https://github.com/Xandu93/VSMods/blob/master/mods/xinvtweaks/src/InventoryUtil.cs
-  //
   private void RegisterKey(string keyCode, GlKeys key) {
     capi.Input.RegisterHotKey(keyCode, $"Smart cursor key: {keyCode}", key,
                               HotkeyType.GUIOrOtherControls);
     capi.Input.SetHotKeyHandler(keyCode, (_) => true);
   }
 
-  // Listining for the cycle camera
   private void HotKeyListener(string hotkeycode, KeyCombination keyComb) {
-    Mod.Logger.Notification($"OMG 1 hotkey: {hotkeycode}");
+    capi.ShowChatMessage($"key {hotkeycode} is up? {keyComb.OnKeyUp}");
+
     switch (hotkeycode) {
     case "smartcursor":
       SmartCursor();
       return;
-      // case "camerastepright": IncreaseCameraRight(); return;
-      // case "camerastepleft": IncreaseCameraLeft(); return;
-      // case "camerastepup": IncreaseCameraUp(); return;
-      // case "camerastepdown": IncreaseCameraDown(); return;
     }
   }
 
   public override void StartClientSide(ICoreClientAPI api) {
+    Mod.Logger.Notification("SmartCursor starting");
     toogle = false;
-    Mod.Logger.Notification("OMG 2 Hello from template mod client side");
     capi = api;
+
+    // TODO configurable keybind
     RegisterKey("smartcursor", GlKeys.R);
     capi.Input.AddHotkeyListener(HotKeyListener);
-    capi.Event.RegisterGameTickListener(DetectHotbarChange, 100);
   }
 
   void DetectHotbarChange(float t) {
+    if (!toogle) {
+      return;
+    }
     var invMan = capi.World.Player.InventoryManager;
     int cur = invMan.ActiveHotbarSlotNumber;
 
-    if (cur != lastSlot) {
-        if (toogle) {
-            PopTool();
-            toogle = false;
-        }
-        lastSlot = cur;
+    // capi.ShowChatMessage($"pressed?
+    // {capi.Input.IsHotKeyPressed("smartcursor")}");
+
+    if (cur != lastSlot || !capi.Input.IsHotKeyPressed("smartcursor")) {
+      PopTool();
+      toogle = false;
+      lastSlot = cur;
+      capi.Event.UnregisterGameTickListener(listener);
     }
   }
 
@@ -88,25 +77,22 @@ public class SmartCursorModSystem : ModSystem {
     case EnumBlockMaterial.Stone:
     case EnumBlockMaterial.Ice:
     case EnumBlockMaterial.Glass:
+    case EnumBlockMaterial.Brick:
       return EnumTool.Pickaxe;
       break;
-    //
     case EnumBlockMaterial.Plant:
       return EnumTool.Knife;
       break;
-    //
     case EnumBlockMaterial.Wood:
     case EnumBlockMaterial.Leaves:
       return EnumTool.Axe;
       break;
+    // Liquid = 8
     // Air = 0
-    // Brick = 18
     // Ceramic = 15
     // Cloth = 16
     // Fire = 19
-    // Gravel = 2
     // Lava = 17
-    // Liquid = 8
     // Mantle = 12
     // Meta = 20
     // Other = 21
@@ -159,74 +145,77 @@ public class SmartCursorModSystem : ModSystem {
   }
 
   bool isRightTool(ItemSlot slot, EnumTool toolType) {
-      EnumTool? currentTool = slot?.Itemstack?.Collectible?.Tool;
-      return currentTool == toolType;
+    EnumTool? currentTool = slot?.Itemstack?.Collectible?.Tool;
+    return currentTool == toolType;
   }
 
   int FindToolSlotInInventory(EnumTool toolType, IInventory inventory) {
-      for (int i = 0; i < inventory.Count; i++) {
-          if (isRightTool(inventory[i], toolType)) {
-              return i;
-          }
+    for (int i = 0; i < inventory.Count; i++) {
+      if (isRightTool(inventory[i], toolType)) {
+        return i;
       }
-      return -1;
+    }
+    return -1;
   }
 
   bool SwapTool(string inventoryName, EnumTool toolType, ItemSlot currentSlot) {
-      IInventory inventory = capi.World.Player.InventoryManager.GetOwnInventory(inventoryName);
+    IInventory inventory =
+        capi.World.Player.InventoryManager.GetOwnInventory(inventoryName);
 
-      int slotNumber = FindToolSlotInInventory(toolType, inventory);
+    int slotNumber = FindToolSlotInInventory(toolType, inventory);
 
-      if (slotNumber < 0) {
-          return false;
-      }
-      ItemSlot slot = inventory[slotNumber];
+    if (slotNumber < 0) {
+      return false;
+    }
+    ItemSlot slot = inventory[slotNumber];
 
-      savedSlot = slotNumber;
-      savedSlotInventory = inventoryName;
-      savedActiveSlot = capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
+    savedSlot = slotNumber;
+    savedSlotInventory = inventoryName;
+    savedActiveSlot = capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
 
-      SwapItemSlot(currentSlot, slot);
+    SwapItemSlot(currentSlot, slot);
 
-      capi.World.Player.InventoryManager.CloseInventoryAndSync(inventory);
-      return true;
-
+    capi.World.Player.InventoryManager.CloseInventoryAndSync(inventory);
+    return true;
   }
 
   bool PushTool() {
-      //Mod.Logger.Notification("OMG 4 Hello from template mod client side");
-      ItemSlot currentSlot =
-          capi.World.Player.InventoryManager.ActiveHotbarSlot;
-      EnumTool toolType = SmartToolSelector();
-      // First Stop if the current tool is the right one
-      if (isRightTool(currentSlot, toolType)) {
-          return false;
-      }
-      if (SwapTool(GlobalConstants.backpackInvClassName, toolType, currentSlot)) {
-          return true;
-      }
-      capi.ShowChatMessage($"Try other ");
-      return SwapTool(GlobalConstants.hotBarInvClassName, toolType, currentSlot);
+    // Mod.Logger.Notification("OMG 4 Hello from template mod client side");
+    ItemSlot currentSlot = capi.World.Player.InventoryManager.ActiveHotbarSlot;
+    EnumTool toolType = SmartToolSelector();
+    // First Stop if the current tool is the right one
+    if (isRightTool(currentSlot, toolType)) {
+      return false;
+    }
+    if (SwapTool(GlobalConstants.backpackInvClassName, toolType, currentSlot)) {
+      return true;
+    }
+    capi.ShowChatMessage($"Try other ");
+    return SwapTool(GlobalConstants.hotBarInvClassName, toolType, currentSlot);
   }
 
   void PopTool() {
-      IInventory backpack = capi.World.Player.InventoryManager.GetOwnInventory(savedSlotInventory);
-      IInventory hotbar = capi.World.Player.InventoryManager.GetOwnInventory(GlobalConstants.hotBarInvClassName);
+    IInventory backpack =
+        capi.World.Player.InventoryManager.GetOwnInventory(savedSlotInventory);
+    IInventory hotbar = capi.World.Player.InventoryManager.GetOwnInventory(
+        GlobalConstants.hotBarInvClassName);
 
-      ItemSlot bar = hotbar[savedActiveSlot];
-      ItemSlot back = backpack[savedSlot];
+    ItemSlot bar = hotbar[savedActiveSlot];
+    ItemSlot back = backpack[savedSlot];
 
-      capi.ShowChatMessage($"Try to put back {back.GetStackName()} in {bar.GetStackName()} ");
-      SwapItemSlot(back, bar);
+    capi.ShowChatMessage(
+        $"Try to put back {back.GetStackName()} in {bar.GetStackName()} ");
+    SwapItemSlot(back, bar);
   }
   void SmartCursor() {
     Mod.Logger.Notification(
         $"OMG ==== Hello from template mod client side {toogle}");
     if (!toogle) {
+      listener = capi.Event.RegisterGameTickListener(DetectHotbarChange, 100);
       toogle = PushTool();
     } else {
-      toogle = false;
-      PopTool();
+      // toogle = false;
+      // PopTool();
     }
   }
 }
