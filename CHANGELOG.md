@@ -1,5 +1,5 @@
 # Changelog
-## [0.0.3] - XXX
+## [0.0.3] - 2026-01-07
 ## Added
 - Now the mod will create a smartcursor.json file in VintagestoryData/ModConfig which can be modified to change the behavior
 - There's a domain tools selection in the configuration, so for example even if mushroom are "Plant", you can force the mod to pop the knife on every mushroom instead of scythe (i don't know why but it's called domain)
