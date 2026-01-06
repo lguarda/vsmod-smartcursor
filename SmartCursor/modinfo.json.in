@@ -8,7 +8,7 @@
         "lguarda"
     ],
     "description": "This mod aim to implement the smartcursor feature from terraria",
-    "version": "0.0.1",
+    "version": "@GIT_VERSION@",
     "dependencies": {
         "game": ""
     }

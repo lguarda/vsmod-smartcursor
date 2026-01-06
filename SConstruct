@@ -45,8 +45,28 @@ def run_program(target, source, env):
     print("Running:", " ".join(cmd))
     subprocess.check_call(cmd)
 
+def git_version():
+    try:
+        return subprocess.check_output(
+            ["git", "describe", "--dirty", "--tags", "--always"],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+    except Exception:
+        return "unknown"
+
+env["GIT_VERSION"] = git_version()
+
+modinfo = env.Substfile(
+    target="SmartCursor/modinfo.json",
+    source="SmartCursor/modinfo.json.in",
+    SUBST_DICT={"@GIT_VERSION@": env["GIT_VERSION"]}
+)
+
+env.Depends("cake-build", modinfo)
+
 # 2. Add a command target
 run = env.Command("run", [], run_program)
+
 
 # 3. Always rebuild/run it (so it runs every time)
 env.AlwaysBuild(run)
