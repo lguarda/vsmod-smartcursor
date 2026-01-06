@@ -54,6 +54,14 @@ env.Command(smartcursor_release, sources, run_cake)
 env.Clean(smartcursor_release, ['SmartCursor/bin', 'SmartCursor/obj', 'Releases'])
 env.Default(smartcursor_release)
 
+fmt = env.Command(
+    target=None,          # no build artifact
+    source=sources,
+    action="clang-format -i $SOURCES"
+)
+
+env.Alias("format", fmt)
+
 install_release = env.Install(f"{str(env["VINTAGE_STORY"])}/Mods", smartcursor_release)
 env.Alias("install", install_release)
 
