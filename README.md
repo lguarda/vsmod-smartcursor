@@ -14,8 +14,9 @@ Right now the keybind is <r> and <`> for the toggle mode
 The current state of this mod is "it work for me" so be careful.
 
 # Todo
-- implement a continuous mod so tool is constantly swapped against targeted block without having to cycle the hotkey
-- support corpse toggle knife
+[ ] implement a continuous mod so tool is constantly swapped against targeted block without having to cycle the hotkey
+[ ] support corpse toggle knife
+[ ] support configurable tools selection (maybe for other mods integration)
 
 ![Some action](demo/vsmod-smartcursor-demo.gif)
 ![Some action](demo/vsmod-smartcursor-demo-inventory-swap.gif)
