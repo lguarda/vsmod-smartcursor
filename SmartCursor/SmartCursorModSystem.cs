@@ -75,6 +75,7 @@ public class SmartCursorModSystem : ModSystem {
 
   // This function return tool based on targeted block
   private EnumTool[] SmartToolSelector() {
+    // TODO clean this or maybe wait for json config
     EnumTool[] tool = SmartToolSelectorEntity();
     if (tool.Length > 0) {
       return tool;
@@ -94,6 +95,7 @@ public class SmartCursorModSystem : ModSystem {
     case EnumBlockMaterial.Soil:
       return [EnumTool.Shovel];
     case EnumBlockMaterial.Metal:
+      return [EnumTool.Hammer];
     case EnumBlockMaterial.Ore:
     case EnumBlockMaterial.Stone:
     case EnumBlockMaterial.Ice:
@@ -108,6 +110,8 @@ public class SmartCursorModSystem : ModSystem {
     case EnumBlockMaterial.Leaves:
       return [EnumTool.Shears, EnumTool.Axe];
     // Liquid = 8
+    // TODO Add Bucket and bowl
+    //
     // Air = 0
     // Cloth = 16
     // Fire = 19
