@@ -39,18 +39,13 @@ public class SmartCursorModSystem : ModSystem {
     }
 
     private void LoadConfig(string path) {
-        Mod.Logger.Notification("MODS OMG 1");
         try {
-        Mod.Logger.Notification("MODS OMG 2");
             _config = _capi.LoadModConfig<SmartCursorConfig>(path);
-        Mod.Logger.Notification($"MODS OMG 3{_config.materialTools["Plant"][0]}");
         } catch (Exception) {
             _config = null;
         }
         if (_config == null) {
-        Mod.Logger.Notification("MODS OMG 4");
             _config = new SmartCursorConfig();
-        Mod.Logger.Notification("MODS OMG 5");
         }
         _capi.StoreModConfig(_config, path);
     }
@@ -74,7 +69,6 @@ public class SmartCursorModSystem : ModSystem {
                 _materialTools[material] = StringsToEnumToolArray(kv.Value);
             }
         }
-        Mod.Logger.Notification($"MODS OMG 6{_materialTools[EnumBlockMaterial.Plant][0]}");
     }
 
     private void parseDomainTools() {
