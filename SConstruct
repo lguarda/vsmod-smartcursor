@@ -2,12 +2,19 @@ import subprocess
 import os
 
 vars = Variables('.sconscache.py')
+home = os.environ.get("HOME")
 
 vars.Add(
     PathVariable(
         'VINTAGE_STORY',
         'Vintage story path',
         '/opt/Vintagestory/',   # default
+        PathVariable.PathAccept
+    ),
+    PathVariable(
+        'VINTAGE_STORY_DATA',
+        'Vintage story data path where mod folder is located',
+        f'{home}/.config/VintagestoryData/',   # default
         PathVariable.PathAccept
     )
 )
@@ -16,6 +23,17 @@ env = Environment(variables=vars)
 vars.Update(env)
 vars.Save('.sconscache.py', env)
 env.Help(vars.GenerateHelpText(env))
+
+def git_version():
+    try:
+        return subprocess.check_output(
+            ["git", "describe", "--dirty", "--tags", "--always"],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+    except Exception:
+        return "unknown"
+
+env["GIT_VERSION"] = git_version()
 
 def run_cake(target, source, env):
     proc_env = os.environ.copy()
@@ -30,10 +48,14 @@ def run_cake(target, source, env):
 
 sources = Glob("SmartCursor/*.cs")
 
-env.Command("cake-build", sources, run_cake)
-env.Clean("cake-build", ['SmartCursor/bin', 'SmartCursor/obj', 'Releases'])
+smartcursor_release = f"Releases/smartcursor_{env["GIT_VERSION"]}.zip"
 
-env.Default("cake-build")
+env.Command(smartcursor_release, sources, run_cake)
+env.Clean(smartcursor_release, ['SmartCursor/bin', 'SmartCursor/obj', 'Releases'])
+env.Default(smartcursor_release)
+
+install_release = env.Install(f"{str(env["VINTAGE_STORY"])}/Mods", smartcursor_release)
+env.Alias("install", install_release)
 
 def run_program(target, source, env):
     cmd = [
@@ -45,16 +67,6 @@ def run_program(target, source, env):
     print("Running:", " ".join(cmd))
     subprocess.check_call(cmd)
 
-def git_version():
-    try:
-        return subprocess.check_output(
-            ["git", "describe", "--dirty", "--tags", "--always"],
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
-    except Exception:
-        return "unknown"
-
-env["GIT_VERSION"] = git_version()
 
 modinfo = env.Substfile(
     target="SmartCursor/modinfo.json",
@@ -62,7 +74,7 @@ modinfo = env.Substfile(
     SUBST_DICT={"@GIT_VERSION@": env["GIT_VERSION"]}
 )
 
-env.Depends("cake-build", modinfo)
+env.Depends(smartcursor_release, modinfo)
 
 # 2. Add a command target
 run = env.Command("run", [], run_program)
