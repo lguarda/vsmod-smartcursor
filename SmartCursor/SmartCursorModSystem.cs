@@ -61,28 +61,28 @@ public class SmartCursorModSystem : ModSystem {
     }
   }
 
-  private EnumTool? SmartToolSelectorEntity() {
+  private EnumTool[] SmartToolSelectorEntity() {
     EntitySelection es = _capi.World.Player.CurrentEntitySelection;
 
     if (es != null) {
       Entity entity = es.Entity;
       if (!entity.Alive) {
-        return EnumTool.Knife;
+        return [EnumTool.Knife];
       }
     }
-    return null;
+    return [];
   }
 
   // This function return tool based on targeted block
-  private EnumTool? SmartToolSelector() {
-    EnumTool? tool = SmartToolSelectorEntity();
-    if (tool != null) {
+  private EnumTool[] SmartToolSelector() {
+    EnumTool[] tool = SmartToolSelectorEntity();
+    if (tool.Length > 0) {
       return tool;
     }
     BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
 
     if (bs == null) {
-      return EnumTool.Sword;
+      return [];
     }
 
     Block block = _capi.World.BlockAccessor.GetBlock(bs.Position);
@@ -92,7 +92,7 @@ public class SmartCursorModSystem : ModSystem {
     case EnumBlockMaterial.Sand:
     case EnumBlockMaterial.Snow:
     case EnumBlockMaterial.Soil:
-      return EnumTool.Shovel;
+      return [EnumTool.Shovel];
     case EnumBlockMaterial.Metal:
     case EnumBlockMaterial.Ore:
     case EnumBlockMaterial.Stone:
@@ -100,12 +100,13 @@ public class SmartCursorModSystem : ModSystem {
     case EnumBlockMaterial.Glass:
     case EnumBlockMaterial.Brick:
     case EnumBlockMaterial.Ceramic:
-      return EnumTool.Pickaxe;
+      return [EnumTool.Pickaxe];
     case EnumBlockMaterial.Plant:
-      return EnumTool.Knife;
+      return [EnumTool.Scythe, EnumTool.Knife];
     case EnumBlockMaterial.Wood:
+      return [EnumTool.Axe];
     case EnumBlockMaterial.Leaves:
-      return EnumTool.Axe;
+      return [EnumTool.Shears, EnumTool.Axe];
     // Liquid = 8
     // Air = 0
     // Cloth = 16
@@ -115,7 +116,7 @@ public class SmartCursorModSystem : ModSystem {
     // Meta = 20
     // Other = 21
     default:
-      return null;
+      return [];
     }
   }
 
@@ -199,24 +200,28 @@ public class SmartCursorModSystem : ModSystem {
 
   private bool PushTool() {
     ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
-    EnumTool? tool = SmartToolSelector();
-    if (tool == null) {
+    EnumTool[] tools = SmartToolSelector();
+    if (tools.Length == 0) {
       return false;
     }
-    EnumTool toolType = (EnumTool)tool;
+    for (int i = 0; i < tools.Length; i++) {
+      // First Stop if the current tool is the right one
+      if (IsRightTool(currentSlot, tools[i])) {
+        return false;
+      }
 
-    // First Stop if the current tool is the right one
-    if (IsRightTool(currentSlot, toolType)) {
-      return false;
+      // Than prioritize hotbar for tool search
+      if (SwapTool(GlobalConstants.backpackInvClassName, tools[i],
+                   currentSlot)) {
+        return true;
+      }
+
+      // When not found take the tool from backpack
+      if (SwapTool(GlobalConstants.hotBarInvClassName, tools[i], currentSlot)) {
+        return true;
+      }
     }
-
-    // Than prioritize hotbar for tool search
-    if (SwapTool(GlobalConstants.backpackInvClassName, toolType, currentSlot)) {
-      return true;
-    }
-
-    // When not found take the tool from backpack
-    return SwapTool(GlobalConstants.hotBarInvClassName, toolType, currentSlot);
+    return false;
   }
 
   private void UnregisterSmartToolStopListListener() {
