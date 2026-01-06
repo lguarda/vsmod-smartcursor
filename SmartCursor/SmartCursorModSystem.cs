@@ -1,6 +1,7 @@
 ﻿using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
+using Vintagestory.API.Common.Entities;
 
 namespace SmartCursor {
 
@@ -49,7 +50,8 @@ public class SmartCursorModSystem : ModSystem {
     if (!_isSmartToolHeld) {
       return;
     }
-    int currentActiveSlotIndex = _capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
+    int currentActiveSlotIndex =
+        _capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
 
     // To avoid confusion when active bar change disable the smart tool
     // or when not in toggle mode and hotkey was released
@@ -59,8 +61,24 @@ public class SmartCursorModSystem : ModSystem {
     }
   }
 
+  private EnumTool? SmartToolSelectorEntity() {
+    EntitySelection es = _capi.World.Player.CurrentEntitySelection;
+
+    if (es != null) {
+      Entity entity = es.Entity;
+      if (!entity.Alive) {
+        return EnumTool.Knife;
+      }
+    }
+    return null;
+  }
+
   // This function return tool based on targeted block
-  private EnumTool SmartToolSelector() {
+  private EnumTool? SmartToolSelector() {
+    EnumTool? tool = SmartToolSelectorEntity();
+    if (tool != null) {
+      return tool;
+    }
     BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
 
     if (bs == null) {
@@ -97,7 +115,7 @@ public class SmartCursorModSystem : ModSystem {
     // Meta = 20
     // Other = 21
     default:
-      return EnumTool.Sword;
+      return null;
     }
   }
 
@@ -181,7 +199,11 @@ public class SmartCursorModSystem : ModSystem {
 
   private bool PushTool() {
     ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
-    EnumTool toolType = SmartToolSelector();
+    EnumTool? tool = SmartToolSelector();
+    if (tool == null) {
+      return false;
+    }
+    EnumTool toolType = (EnumTool)tool;
 
     // First Stop if the current tool is the right one
     if (IsRightTool(currentSlot, toolType)) {
