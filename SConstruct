@@ -10,7 +10,9 @@ vars.Add(
         'Vintage story path',
         '/opt/Vintagestory/',   # default
         PathVariable.PathAccept
-    ),
+    )
+)
+vars.Add(
     PathVariable(
         'VINTAGE_STORY_DATA',
         'Vintage story data path where mod folder is located',
@@ -62,7 +64,7 @@ fmt = env.Command(
 
 env.Alias("format", fmt)
 
-install_release = env.Install(f"{str(env["VINTAGE_STORY"])}/Mods", smartcursor_release)
+install_release = env.InstallAs(target=f"{str(env["VINTAGE_STORY_DATA"])}/Mods/smartcursor.zip", source=smartcursor_release)
 env.Alias("install", install_release)
 
 def run_program(target, source, env):
