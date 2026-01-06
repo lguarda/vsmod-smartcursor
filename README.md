@@ -14,8 +14,9 @@ Right now the keybind is <r> and <`> for the toggle mode
 The current state of this mod is "it work for me" so be careful.
 
 # Todo
+[X] support corpse toggle knife
+[ ] support Bucket and bowl for liked
 [ ] implement a continuous mod so tool is constantly swapped against targeted block without having to cycle the hotkey
-[ ] support corpse toggle knife
 [ ] support configurable tools selection (maybe for other mods integration)
 
 ![Some action](demo/vsmod-smartcursor-demo.gif)
