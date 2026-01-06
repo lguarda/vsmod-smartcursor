@@ -27,7 +27,7 @@ env.Help(vars.GenerateHelpText(env))
 def git_version():
     try:
         return subprocess.check_output(
-            ["git", "describe", "--dirty", "--tags", "--always"],
+            ["git", "describe", "--tags", "--always"],
             stderr=subprocess.DEVNULL
         ).decode().strip()
     except Exception:
