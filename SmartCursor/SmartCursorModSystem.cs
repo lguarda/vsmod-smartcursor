@@ -18,6 +18,9 @@ public class SmartCursorModSystem : ModSystem {
     bool _isSmartToolHeld;
     bool _isToggleMode;
     long _listener = -1;
+
+    string _previousBlockCode;
+
     SmartCursorConfig _config;
     Dictionary<EnumBlockMaterial, EnumTool[]> _materialTools;
     Dictionary<string, EnumTool[]> _domainTools;
@@ -92,18 +95,36 @@ public class SmartCursorModSystem : ModSystem {
         RegisterKey(HOTKEY_SMARTCURSOR_TOGGLE, GlKeys.Tilde);
         _capi.Input.AddHotkeyListener(HotKeyListener);
     }
+    private bool SmartToolReload() {
+        BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
+        Block block = bs != null ? _capi.World.BlockAccessor.GetBlock(bs.Position) : null;
+        string blockCode = block?.Code?.Path;
 
-    private void SmartToolStopListListener(float t) {
-        // This should not happen but don't do anything if there's no current smart
-        // tool held
-        if (!_isSmartToolHeld) {
-            return;
+        if (blockCode != _previousBlockCode) {
+            ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
+            EnumTool[] tools = SmartToolSelector();
+            if (tools.Length > 0 && !IsRightTool(currentSlot, tools[0])) {
+                PopTool();
+                _isSmartToolHeld = PushTool();
+                return true;
+            }
         }
+        return false;
+    }
+    private void SmartToolStopListListener(float t) {
+        if (!_isToggleMode) {
 
-        // When not in toggle mode and hotkey was released pop tool
-        if (!_isToggleMode && !_capi.Input.IsHotKeyPressed(HOTKEY_SMARTCURSOR)) {
-            PopTool();
-            return;
+            // When not in toggle mode and hotkey was released pop tool
+            if (!_capi.Input.IsHotKeyPressed(HOTKEY_SMARTCURSOR)) {
+                PopTool();
+                UnregisterSmartToolStopListListener();
+                return;
+            }
+
+            // When continuousMode enabled and reload was done stop here
+            if (_config.continuousMode && SmartToolReload()) {
+                return;
+            }
         }
 
         // When player take item pop tools to avoid weird item movement
@@ -111,6 +132,7 @@ public class SmartCursorModSystem : ModSystem {
         ItemSlot mouseItemSlot = _capi.World.Player.InventoryManager.MouseItemSlot;
         if (!mouseItemSlot.Empty) {
             PopTool();
+            UnregisterSmartToolStopListListener();
             return;
         }
 
@@ -118,6 +140,7 @@ public class SmartCursorModSystem : ModSystem {
         int currentActiveSlotIndex = _capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
         if (currentActiveSlotIndex != _savedActiveSlotIndex) {
             PopTool();
+            UnregisterSmartToolStopListListener();
             return;
         }
     }
@@ -149,7 +172,8 @@ public class SmartCursorModSystem : ModSystem {
 
         Block block = _capi.World.BlockAccessor.GetBlock(bs.Position);
         //_capi.ShowChatMessage($"Material {block.BlockMaterial}");
-        string prefix = block?.Code?.Path is string p ? (p.IndexOf('-') is int i && i >= 0 ? p[..i] : p) : null;
+        _previousBlockCode = block?.Code?.Path;
+        string prefix = _previousBlockCode is string p ? (p.IndexOf('-') is int i && i >= 0 ? p[..i] : p) : null;
 
         if (_domainTools.TryGetValue(prefix, out tools)) {
             return tools;
@@ -173,12 +197,12 @@ public class SmartCursorModSystem : ModSystem {
         return true;
     }
 
-    private bool IsRightTool(ItemSlot slot, EnumTool toolType) {
+    static private bool IsRightTool(ItemSlot slot, EnumTool toolType) {
         EnumTool? currentTool = slot?.Itemstack?.Collectible?.Tool;
         return currentTool == toolType;
     }
 
-    private int FindToolSlotInInventory(EnumTool toolType, IInventory inventory) {
+    static private int FindToolSlotInInventory(EnumTool toolType, IInventory inventory) {
         for (int i = 0; i < inventory.Count; i++) {
             if (IsRightTool(inventory[i], toolType)) {
                 return i;
@@ -236,9 +260,10 @@ public class SmartCursorModSystem : ModSystem {
         }
     }
     private void PopTool() {
-        _isSmartToolHeld = false;
-        UnregisterSmartToolStopListListener();
-        SwapItemSlot();
+        if (_isSmartToolHeld) {
+            _isSmartToolHeld = false;
+            SwapItemSlot();
+        }
     }
 
     private void StartSmartCursor(bool mode) {
@@ -249,6 +274,7 @@ public class SmartCursorModSystem : ModSystem {
             _isSmartToolHeld = PushTool();
         } else if (_isToggleMode) {
             PopTool();
+            UnregisterSmartToolStopListListener();
         }
     }
 }

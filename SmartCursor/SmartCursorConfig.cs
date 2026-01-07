@@ -10,8 +10,12 @@ namespace SmartCursor {
 public class SmartCursorConfig {
     public Dictionary<string, string[]> materialTools = new Dictionary<string, string[]>();
     public Dictionary<string, string[]> domainTools = new Dictionary<string, string[]>();
+    public bool continuousMode;
 
     public SmartCursorConfig() {
+        // Set the default value
+        continuousMode = true;
+
         domainTools = new() {
             // We don't want Scythe for mushroom
             ["mushroom"] = new[] { "Knife" },
