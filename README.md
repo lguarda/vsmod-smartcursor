@@ -15,9 +15,32 @@ The current state of this mod is "it work for me" so be careful.
 
 # Todo
 [X] support corpse toggle knife
-[ ] support Bucket and bowl for liked
-[ ] implement a continuous mod so tool is constantly swapped against targeted block without having to cycle the hotkey
-[ ] support configurable tools selection (maybe for other mods integration)
+[ ] support Bucket and bowl for liquid
+[X] implement a continuous mod so tool is constantly swapped against targeted block without having to cycle the hotkey
+[X] support configurable tools selection (maybe for other mods integration)
+
+# Build & run
+Why scons the donet echo system looks like really windows specfic
+    .1 i don't have windows
+    .2 i don't know how the mod building works, i simply copy paste the example from https://github.com/anegostudios/vsmodtemplate
+
+So it's built like this:
+
+    # This need to be ran only once
+    scons VINTAGE_STORY=$(realpath <path to vs>) VINTAGE_STORY_DATA=$(realpath <your vs data location>)
+
+    # default value for VINTAGE_STORY_DATA is ~/.config/VintagestoryData/ so you may not need this
+
+    # than
+    scons install run
+    scons # or simply scons for build only
+
+
+# Analyze
+Don't forget to install roslynator first
+
+    dotnet tool install -g roslynator.dotnet.cli
+    scons analyze
 
 ![Some action](demo/vsmod-smartcursor-demo.gif)
 ![Some action](demo/vsmod-smartcursor-demo-inventory-swap.gif)
