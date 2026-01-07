@@ -4,6 +4,8 @@ import os
 vars = Variables('.sconscache.py')
 home = os.environ.get("HOME")
 
+# TODO: make some order in this file by useing scons-site directory
+
 vars.Add(
     PathVariable(
         'VINTAGE_STORY',
@@ -46,7 +48,7 @@ def run_cake(target, source, env):
         "--project",
         "./CakeBuild/CakeBuild.csproj"
     ]
-    subprocess.check_call(cmd, env=proc_env)
+    subprocess.run(cmd, env=proc_env)
 
 sources = Glob("SmartCursor/*.cs")
 
@@ -63,6 +65,7 @@ fmt = env.Command(
 )
 
 env.Alias("format", fmt)
+env.Alias("fmt", fmt)
 
 install_release = env.InstallAs(target=f"{str(env["VINTAGE_STORY_DATA"])}/Mods/smartcursor.zip", source=smartcursor_release)
 env.Alias("install", install_release)
@@ -75,8 +78,7 @@ def run_program(target, source, env):
     ]
 
     print("Running:", " ".join(cmd))
-    subprocess.check_call(cmd)
-
+    subprocess.run(cmd)
 
 modinfo = env.Substfile(
     target="SmartCursor/modinfo.json",
@@ -89,6 +91,20 @@ env.Depends(smartcursor_release, modinfo)
 # 2. Add a command target
 run = env.Command("run", [], run_program)
 
-
 # 3. Always rebuild/run it (so it runs every time)
 env.AlwaysBuild(run)
+
+def analyze(target, source, env):
+    proc_env = os.environ.copy()
+    proc_env["VINTAGE_STORY"] = str(env["VINTAGE_STORY"])
+    cmd = [
+        f"{home}/.dotnet/tools/roslynator",
+        "analyze",
+        "SmartCursor/SmartCursor.csproj",
+    ]
+    print("Running:", " ".join(cmd))
+    subprocess.run(cmd, env=proc_env)
+
+analyze = env.Command("analyze", [], analyze)
+
+env.AlwaysBuild(analyze)
