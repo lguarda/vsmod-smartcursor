@@ -1,4 +1,13 @@
 # Changelog
+## [0.0.4] - 2026-01-07
+### Fixed
+- Before the World.Player.InventoryManager.TryTransferTo was used to transfer swap item passing by the mouse slot, first this was shitty code then it cause weird bug with
+  some item (bucket filled with liquid), i changed it to IInventory.TryFlipItems, mouse slot is no longer used as temporary slot, and the bug don't exist anymore
+### Added
+- Now if you keep the key pressed and look at different block it will continue to update the tool in your hand.
+- `continuousMode` was added in `smartcursor.json` to control this behavior it's `true` by default
+- New keybind was added `smartcursor one shot` it's not set by default, when pressed it will swap the tool but it's permanent (not really permanent but the mod will not do it for you)
+
 ## [0.0.3] - 2026-01-07
 ### Added
 - Now the mod will create a smartcursor.json file in VintagestoryData/ModConfig which can be modified to change the behavior
