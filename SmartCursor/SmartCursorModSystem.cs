@@ -10,6 +10,7 @@ namespace SmartCursor {
 public class SmartCursorModSystem : ModSystem {
     const string HOTKEY_SMARTCURSOR = "smartcursor";
     const string HOTKEY_SMARTCURSOR_TOGGLE = "smartcursor toggle";
+    const string HOTKEY_SMARTCURSOR_ONE_SHOT = "smartcursor one shot";
 
     ICoreClientAPI _capi;
     int _savedSlotIndex;
@@ -37,6 +38,9 @@ public class SmartCursorModSystem : ModSystem {
             break;
         case HOTKEY_SMARTCURSOR_TOGGLE:
             StartSmartCursor(true);
+            break;
+        case HOTKEY_SMARTCURSOR_ONE_SHOT:
+            PushTool();
             break;
         }
     }
@@ -93,6 +97,7 @@ public class SmartCursorModSystem : ModSystem {
 
         RegisterKey(HOTKEY_SMARTCURSOR, GlKeys.R);
         RegisterKey(HOTKEY_SMARTCURSOR_TOGGLE, GlKeys.Tilde);
+        RegisterKey(HOTKEY_SMARTCURSOR_ONE_SHOT, GlKeys.Unknown);
         _capi.Input.AddHotkeyListener(HotKeyListener);
     }
     private bool SmartToolReload() {
