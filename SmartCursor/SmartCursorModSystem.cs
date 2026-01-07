@@ -99,13 +99,26 @@ public class SmartCursorModSystem : ModSystem {
         if (!_isSmartToolHeld) {
             return;
         }
-        int currentActiveSlotIndex = _capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
+
+        // When not in toggle mode and hotkey was released pop tool
+        if (!_isToggleMode && !_capi.Input.IsHotKeyPressed(HOTKEY_SMARTCURSOR)) {
+            PopTool();
+            return;
+        }
+
+        // When player take item pop tools to avoid weird item movement
+        // TODO find better solution is there any event?
+        ItemSlot mouseItemSlot = _capi.World.Player.InventoryManager.MouseItemSlot;
+        if (!mouseItemSlot.Empty) {
+            PopTool();
+            return;
+        }
 
         // To avoid confusion when active bar change disable the smart tool
-        // or when not in toggle mode and hotkey was released
-        if (currentActiveSlotIndex != _savedActiveSlotIndex ||
-            (!_isToggleMode && !_capi.Input.IsHotKeyPressed(HOTKEY_SMARTCURSOR))) {
+        int currentActiveSlotIndex = _capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
+        if (currentActiveSlotIndex != _savedActiveSlotIndex) {
             PopTool();
+            return;
         }
     }
 
@@ -149,43 +162,10 @@ public class SmartCursorModSystem : ModSystem {
         return [];
     }
 
-    private bool SwapItemSlot(ItemSlot a, ItemSlot b) {
-        // Until i know how to do this properly right now i'm using the
-        // mouseItemSlot as temporary item holder during the swap
-        ItemSlot mouseItemSlot = _capi.World.Player.InventoryManager.MouseItemSlot;
-        if (!mouseItemSlot.Empty) {
-            return false;
-        }
-
-        // I really need to find a better way to do this it's seems to work
-        // Now this two move operation are here to account for empty item slot as
-        // well as slot with multiple stack size maybe try with max stack size and
-        // call it a day?
-        ItemStackMoveOperation op_a =
-            new ItemStackMoveOperation(_capi.World, EnumMouseButton.None, 0, EnumMergePriority.ConfirmedMerge, a.StackSize);
-
-        ItemStackMoveOperation op_b =
-            new ItemStackMoveOperation(_capi.World, EnumMouseButton.None, 0, EnumMergePriority.ConfirmedMerge, b.StackSize);
-
-        object obj = _capi.World.Player.InventoryManager.TryTransferTo(a, mouseItemSlot, ref op_a);
-        if (obj != null) {
-            _capi.Network.SendPacketClient(obj);
-        }
-
-        // There's a bug here if item a is a bowl or bucket, and somewhere in your inventory or bar you have
-        // a another bowl or bucket filled with something, the other item will be replaced, it's really hard to explain
-        // but it's clearly looks like a bug in TryTransferTo, i try different operation but it doesn't seems to have any impact
-        if (!a.Empty) {
-            // stop here until i found fix for this bug
-            return false;
-        }
-
-        obj = _capi.World.Player.InventoryManager.TryTransferTo(b, a, ref op_b);
-        if (obj != null) {
-            _capi.Network.SendPacketClient(obj);
-        }
-
-        obj = _capi.World.Player.InventoryManager.TryTransferTo(mouseItemSlot, b, ref op_a);
+    private bool SwapItemSlot() {
+        IInventory hotbar = _capi.World.Player.InventoryManager.GetOwnInventory(GlobalConstants.hotBarInvClassName);
+        IInventory inventory = _capi.World.Player.InventoryManager.GetOwnInventory(_savedSlotInventoryName);
+        object obj = hotbar.TryFlipItems(_savedActiveSlotIndex, inventory[_savedSlotIndex]);
         if (obj != null) {
             _capi.Network.SendPacketClient(obj);
         }
@@ -215,17 +195,12 @@ public class SmartCursorModSystem : ModSystem {
         if (slotNumber < 0) {
             return false;
         }
-        ItemSlot slot = inventory[slotNumber];
 
         _savedSlotIndex = slotNumber;
         _savedSlotInventoryName = inventoryName;
         _savedActiveSlotIndex = _capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
 
-        bool ret = SwapItemSlot(currentSlot, slot);
-
-        // TODO is this needed?
-        _capi.World.Player.InventoryManager.CloseInventoryAndSync(inventory);
-        return ret;
+        return SwapItemSlot();
     }
 
     private bool PushTool() {
@@ -263,13 +238,7 @@ public class SmartCursorModSystem : ModSystem {
     private void PopTool() {
         _isSmartToolHeld = false;
         UnregisterSmartToolStopListListener();
-        IInventory inventory = _capi.World.Player.InventoryManager.GetOwnInventory(_savedSlotInventoryName);
-        IInventory hotbar = _capi.World.Player.InventoryManager.GetOwnInventory(GlobalConstants.hotBarInvClassName);
-
-        ItemSlot bar = hotbar[_savedActiveSlotIndex];
-        ItemSlot back = inventory[_savedSlotIndex];
-
-        SwapItemSlot(bar, back);
+        SwapItemSlot();
     }
 
     private void StartSmartCursor(bool mode) {
