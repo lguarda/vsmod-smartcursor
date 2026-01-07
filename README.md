@@ -13,6 +13,10 @@ Right now the keybind is <r> and <`> for the toggle mode
 
 The current state of this mod is "it work for me" so be careful.
 
+![Some action](demo/vsmod-smartcursor-demo.gif)
+![Some action](demo/vsmod-smartcursor-continuous-demo.gif)
+![Some action](demo/vsmod-smartcursor-demo-inventory-swap.gif)
+
 # Todo
 [X] support corpse toggle knife
 [ ] support Bucket and bowl for liquid
@@ -41,6 +45,3 @@ Don't forget to install roslynator first
 
     dotnet tool install -g roslynator.dotnet.cli
     scons analyze
-
-![Some action](demo/vsmod-smartcursor-demo.gif)
-![Some action](demo/vsmod-smartcursor-demo-inventory-swap.gif)
