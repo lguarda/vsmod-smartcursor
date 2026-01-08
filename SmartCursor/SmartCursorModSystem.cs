@@ -218,6 +218,9 @@ public class SmartCursorModSystem : ModSystem {
 
     private bool SwapTool(string inventoryName, EnumTool toolType, ItemSlot currentSlot) {
         IInventory inventory = _capi.World.Player.InventoryManager.GetOwnInventory(inventoryName);
+        if (inventory == null) {
+            return false;
+        }
 
         int slotNumber = FindToolSlotInInventory(toolType, inventory);
 
@@ -245,14 +248,11 @@ public class SmartCursorModSystem : ModSystem {
                 return false;
             }
 
-            // Than prioritize hotbar for tool search
-            if (SwapTool(GlobalConstants.backpackInvClassName, tools[i], currentSlot)) {
-                return true;
-            }
-
-            // When not found take the tool from backpack
-            if (SwapTool(GlobalConstants.hotBarInvClassName, tools[i], currentSlot)) {
-                return true;
+            // Search on each inventory configured in inventories order matter
+            for (int j = 0; j < _config.inventories.Length; j++) {
+                if (SwapTool(_config.inventories[j], tools[i], currentSlot)) {
+                    return true;
+                }
             }
         }
         return false;

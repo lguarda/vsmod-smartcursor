@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Vintagestory.API.Common;
+using Vintagestory.API.Config;
 
 // thanks to
 // https://github.com/Xandu93/VSMods/blob/master/mods/xinvtweaks/src/InvTweaksConfig.cs
@@ -10,11 +11,18 @@ namespace SmartCursor {
 public class SmartCursorConfig {
     public Dictionary<string, string[]> materialTools = new Dictionary<string, string[]>();
     public Dictionary<string, string[]> domainTools = new Dictionary<string, string[]>();
+    public string[] inventories;
     public bool continuousMode;
 
     public SmartCursorConfig() {
         // Set the default value
         continuousMode = true;
+
+        inventories = new string[] {
+            "toolbelt", // salty's toolbelt
+            GlobalConstants.hotBarInvClassName, // "hotbar"
+            GlobalConstants.backpackInvClassName, // "backpack"
+        };
 
         domainTools = new() {
             // We don't want Scythe for mushroom
