@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0] - 2026-01-08
+### Added
+- new key bind to blacklist item in current active slot
+### Changed
+- Key bind has been renamed
+- Default Key bind for toggle mod is now <alt+r>
+
 ## [0.0.5] - 2026-01-08
 ### Added
 - new field `inventories` in `smartcursor.json` which allow custom inventories as well as custom order of search
