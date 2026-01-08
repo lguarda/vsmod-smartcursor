@@ -13,15 +13,18 @@ Right now the keybind is <r> and <`> for the toggle mode
 
 The current state of this mod is "it work for me" so be careful.
 
+Notable feature
+- looking at dead corpse knife will be popped (This is not configurable right now)
+- specific tools for block can be configured here in mods config `smartcursor.json`
+- in the config if continuousMode is set to true (it is by default) tool is constantly swapped against targeted block without having to cycle the hotkey
+- inventory order and custom inventory is supported for example by default salty's toolbelt mod is supported other inventories can be added the mod config in field `inventories`
+
 ![Some action](demo/vsmod-smartcursor-demo.gif)
 ![Some action](demo/vsmod-smartcursor-continuous-demo.gif)
 ![Some action](demo/vsmod-smartcursor-demo-inventory-swap.gif)
 
 # Todo
-[X] support corpse toggle knife
 [ ] support Bucket and bowl for liquid
-[X] implement a continuous mod so tool is constantly swapped against targeted block without having to cycle the hotkey
-[X] support configurable tools selection (maybe for other mods integration)
 
 # Build & run
 Why scons the donet echo system looks like really windows specfic
