@@ -6,7 +6,7 @@ This is a Vintagestory client side mode which aim to implement the smart cursor 
 # How it Works
 SmartCursor automatically selects the most appropriate tool based on what you are looking at.
 
-When a keybind is pressed, the mod analyzes:
+When the keybind is pressed, the mod analyzes:
 - the targeted entity (if any currently only support dead corps to pop the knife)
 - otherwise the targeted block
 
@@ -38,17 +38,23 @@ Based on this analysis, it determines the preferred tool
 ### Modes
 - **Hold mode**: (default: 'R')
   While the key is held, the tool in hand updates dynamically as you look at different blocks or entities.
-- **Toggle mode**: (default '`')
+- **Toggle mode**: (default 'alt+R')
   Press once to activate SmartCursor, press again to restore the previous item.
-- **One-shot mode**: (default 'unbound')
+- **One-shot mode**: (default 'None')
   Press once to select the correct tool and keep it; SmartCursor will not swap it back automatically.
 
 ### Restore behavior
 - When SmartCursor deactivates (key released or toggle off), the original item is restored to its original slot.
 
+### Blacklist
+- You can black list item in the current active hotbar slot by pressing a key (default: <ctrl+alt+R>) it will toggle on and off black list for this item
+  it can be useful for quest item ex: "Tin bronze pickaxe" if you want to be sure the mod will not pop this item.
+  It can also be used if the mod has a bug or if other mod as some issue, for example the mod walkingstick the item property is tagged as pickaxe, so the mod can pop them, so you can simply black list it.
+
 ### Configuration
 - A `smartcursor.json` file is created in `VintagestoryData/ModConfig`
 - Behavior such as continuous updating and tool priorities can be customized
+
 
 ### Current status
 This mod is experimental.
@@ -58,7 +64,7 @@ The current state is **"it works for me"** — use at your own risk.
 [ ] support Bucket and bowl for liquid
 
 # Build & run
-Why scons the donet echo system looks like really windows specfic
+Why scons? the dotnet echo system looks like really windows specific
     .1 i don't have windows
     .2 i don't know how the mod building works, i simply copy paste the example from https://github.com/anegostudios/vsmodtemplate
 
