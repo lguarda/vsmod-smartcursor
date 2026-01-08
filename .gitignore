@@ -5,3 +5,4 @@ SmartCursor/bin
 SmartCursor/obj
 .sconsign.dblite
 .sconscache.py
+SmartCursor/modinfo.json
