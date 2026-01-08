@@ -8,9 +8,11 @@ using System.Collections.Generic;
 namespace SmartCursor {
 
 public class SmartCursorModSystem : ModSystem {
+    const string CONFIG_PATH = "smartcursor.json";
     const string HOTKEY_SMARTCURSOR = "smartcursor";
     const string HOTKEY_SMARTCURSOR_TOGGLE = "smartcursor toggle";
     const string HOTKEY_SMARTCURSOR_ONE_SHOT = "smartcursor one shot";
+    const string HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE = "smartcursor blacklist toggle";
 
     ICoreClientAPI _capi;
     int _savedSlotIndex;
@@ -26,8 +28,12 @@ public class SmartCursorModSystem : ModSystem {
     Dictionary<EnumBlockMaterial, EnumTool[]> _materialTools;
     Dictionary<string, EnumTool[]> _domainTools;
 
-    private void RegisterKey(string keyCode, GlKeys key) {
-        _capi.Input.RegisterHotKey(keyCode, $"Smart cursor key: {keyCode}", key, HotkeyType.GUIOrOtherControls);
+    private void RegisterKey(string keyCode, GlKeys key, bool altPressed = false, bool ctrlPressed = false,
+                             bool shiftPressed = false) {
+        string keybindDisplayName = Lang.Get($"smartcursor:{keyCode}");
+
+        _capi.Input.RegisterHotKey(keyCode, $"Smart cursor: {keybindDisplayName}", key, HotkeyType.GUIOrOtherControls,
+                                   altPressed, ctrlPressed, shiftPressed);
         _capi.Input.SetHotKeyHandler(keyCode, (_) => true);
     }
 
@@ -42,8 +48,13 @@ public class SmartCursorModSystem : ModSystem {
         case HOTKEY_SMARTCURSOR_ONE_SHOT:
             PushTool();
             break;
+        case HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE:
+            BlackListItem();
+            break;
         }
     }
+
+    private void SaveConfig(string path) { _capi.StoreModConfig(_config, path); }
 
     private void LoadConfig(string path) {
         try {
@@ -54,7 +65,6 @@ public class SmartCursorModSystem : ModSystem {
         if (_config == null) {
             _config = new SmartCursorConfig();
         }
-        _capi.StoreModConfig(_config, path);
     }
 
     private EnumTool[] StringsToEnumToolArray(string[] tools) {
@@ -91,12 +101,14 @@ public class SmartCursorModSystem : ModSystem {
         _isSmartToolHeld = false;
         _capi = api;
 
-        LoadConfig("smartcursor.json");
+        LoadConfig(CONFIG_PATH);
+        SaveConfig(CONFIG_PATH);
         parseDomainTools();
         parseMaterialTools();
 
+        RegisterKey(HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE, GlKeys.R, true, true);
         RegisterKey(HOTKEY_SMARTCURSOR, GlKeys.R);
-        RegisterKey(HOTKEY_SMARTCURSOR_TOGGLE, GlKeys.Tilde);
+        RegisterKey(HOTKEY_SMARTCURSOR_TOGGLE, GlKeys.R, true);
         RegisterKey(HOTKEY_SMARTCURSOR_ONE_SHOT, GlKeys.Unknown);
         _capi.Input.AddHotkeyListener(HotKeyListener);
     }
@@ -202,12 +214,12 @@ public class SmartCursorModSystem : ModSystem {
         return true;
     }
 
-    static private bool IsRightTool(ItemSlot slot, EnumTool toolType) {
+    private bool IsRightTool(ItemSlot slot, EnumTool toolType) {
         EnumTool? currentTool = slot?.Itemstack?.Collectible?.Tool;
-        return currentTool == toolType;
+        return currentTool == toolType && !isItemBlackListed(slot);
     }
 
-    static private int FindToolSlotInInventory(EnumTool toolType, IInventory inventory) {
+    private int FindToolSlotInInventory(EnumTool toolType, IInventory inventory) {
         for (int i = 0; i < inventory.Count; i++) {
             if (IsRightTool(inventory[i], toolType)) {
                 return i;
@@ -233,6 +245,26 @@ public class SmartCursorModSystem : ModSystem {
         _savedActiveSlotIndex = _capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
 
         return SwapItemSlot();
+    }
+
+    bool isItemBlackListed(ItemSlot item) {
+        // "Tin bronze pickaxe"
+        return _config.itemBlackList.Contains(item.GetStackName());
+    }
+
+    private void BlackListItem() {
+        ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
+        if (!currentSlot.Empty) {
+            string name = currentSlot.GetStackName();
+            if (_config.itemBlackList.Contains(name)) {
+                _config.itemBlackList.Remove(name);
+                _capi.ShowChatMessage($"Removed from blacklist: {name}");
+            } else {
+                _config.itemBlackList.Add(name);
+                _capi.ShowChatMessage($"Added to Blacklist: {name}");
+            }
+            SaveConfig(CONFIG_PATH);
+        }
     }
 
     private bool PushTool() {

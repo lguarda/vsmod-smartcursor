@@ -9,6 +9,7 @@ using Vintagestory.API.Config;
 
 namespace SmartCursor {
 public class SmartCursorConfig {
+    public HashSet<string> itemBlackList;
     public Dictionary<string, string[]> materialTools = new Dictionary<string, string[]>();
     public Dictionary<string, string[]> domainTools = new Dictionary<string, string[]>();
     public string[] inventories;
@@ -17,10 +18,11 @@ public class SmartCursorConfig {
     public SmartCursorConfig() {
         // Set the default value
         continuousMode = true;
+        itemBlackList = new() {};
 
         inventories = new string[] {
-            "toolbelt", // salty's toolbelt
-            GlobalConstants.hotBarInvClassName, // "hotbar"
+            "toolbelt",                           // salty's toolbelt
+            GlobalConstants.hotBarInvClassName,   // "hotbar"
             GlobalConstants.backpackInvClassName, // "backpack"
         };
 
