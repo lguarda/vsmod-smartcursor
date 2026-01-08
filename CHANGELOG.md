@@ -1,4 +1,10 @@
 # Changelog
+
+## [0.0.5] - 2026-01-08
+### Added
+- new field `inventories` in `smartcursor.json` which allow custom inventories as well as custom order of search
+- by default salty's toolbelt is supported
+
 ## [0.0.4] - 2026-01-07
 ### Fixed
 - Before the World.Player.InventoryManager.TryTransferTo was used to transfer swap item passing by the mouse slot, first this was shitty code then it cause weird bug with
