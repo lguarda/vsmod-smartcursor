@@ -94,7 +94,7 @@ run = env.Command("run", [], run_program)
 # 3. Always rebuild/run it (so it runs every time)
 env.AlwaysBuild(run)
 
-def analyze(target, source, env):
+def roslynator(target, source, env):
     proc_env = os.environ.copy()
     proc_env["VINTAGE_STORY"] = str(env["VINTAGE_STORY"])
     cmd = [
@@ -105,6 +105,5 @@ def analyze(target, source, env):
     print("Running:", " ".join(cmd))
     subprocess.run(cmd, env=proc_env)
 
-analyze = env.Command("analyze", [], analyze)
-
-env.AlwaysBuild(analyze)
+check = env.Command("check", [], roslynator)
+env.AlwaysBuild(check)
