@@ -6,3 +6,4 @@ SmartCursor/obj
 .sconsign.dblite
 .sconscache.py
 SmartCursor/modinfo.json
+site_scons/__pycache__
