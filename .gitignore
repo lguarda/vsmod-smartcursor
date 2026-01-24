@@ -1,9 +1,14 @@
 Releases
+ReleasesServer
 CakeBuild/bin
 CakeBuild/obj
 SmartCursor/bin
 SmartCursor/obj
+SmartCursorPlus/bin
+SmartCursorPlus/obj
 .sconsign.dblite
 .sconscache.py
 SmartCursor/modinfo.json
+SmartCursorPlus/modinfo.json
 site_scons/__pycache__
+CakeBuildPlus

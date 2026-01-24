@@ -1,0 +1,1 @@
+../SmartCursor/SmartCursorConfig.cs
