@@ -68,8 +68,11 @@ fmt = env.Command(
 env.Alias("format", fmt)
 env.Alias("fmt", fmt)
 
-install_release = env.InstallAs(target=f"{str(env["VINTAGE_STORY_DATA"])}/Mods/smartcursor.zip", source=smartcursor_release)
-env.Alias("install", install_release)
+smartcursor_install_release = env.InstallAs(target=f"{str(env["VINTAGE_STORY_DATA"])}/Mods/smartcursor.zip", source=smartcursor_release)
+smartcursorplus_install_release = env.Command(None, smartcursorplus_release, f"cp $SOURCE {str(env["VINTAGE_STORY_DATA"])}/Mods/smartcursor.zip")
+
+env.Alias("install", smartcursor_install_release)
+env.Alias("sinstall", smartcursorplus_install_release)
 
 def run_program(target, source, env):
     cmd = [

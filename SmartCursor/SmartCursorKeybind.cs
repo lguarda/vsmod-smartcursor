@@ -8,7 +8,6 @@ using System.Collections.Generic;
 
 using Vintagestory.API.MathTools;
 
-
 namespace SmartCursor {
 
 public class SmartCursorKeybind {
@@ -17,18 +16,17 @@ public class SmartCursorKeybind {
     public const string HOTKEY_SMARTCURSOR_TOGGLE = "smartcursor toggle";
     public const string HOTKEY_SMARTCURSOR_ONE_SHOT = "smartcursor one shot";
     public const string HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE = "smartcursor blacklist toggle";
-    #if WITH_SERVER
+#if WITH_SERVER
     public const string HOTKEY_SMARTCURSOR_PLACEMENT = "smartcursor block placement";
-    #endif
+#endif
 
-    static public void RegisterClientKey(ICoreClientAPI capi, string keyCode, GlKeys key, bool altPressed = false, bool ctrlPressed = false,
-                             bool shiftPressed = false) {
+    static public void RegisterClientKey(ICoreClientAPI capi, string keyCode, GlKeys key, bool altPressed = false,
+                                         bool ctrlPressed = false, bool shiftPressed = false) {
         string keybindDisplayName = Lang.Get($"smartcursor:{keyCode}");
 
         capi.Input.RegisterHotKey(keyCode, $"Smart cursor: {keybindDisplayName}", key, HotkeyType.GUIOrOtherControls,
-                                   altPressed, ctrlPressed, shiftPressed);
+                                  altPressed, ctrlPressed, shiftPressed);
         capi.Input.SetHotKeyHandler(keyCode, (_) => true);
     }
-
 }
 }
