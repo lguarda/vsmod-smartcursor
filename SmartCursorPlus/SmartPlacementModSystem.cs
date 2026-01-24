@@ -105,12 +105,68 @@ public class SmartPlacement : ModSystem {
 
     }
 
+    void DebugDrawPoint(Vec3d pos) {
+        SimpleParticleProperties p =
+            new SimpleParticleProperties(1,                                // float minQuantity,
+                                         1,                                // float maxQuantity
+                                         ColorUtil.ToRgba(255, 255, 0, 0), // int color
+                                         pos,                              // Vec3d minPos
+                                         pos,                              // Vec3d maxPos
+                                         Vec3f.Zero,                       // Vec3f minVelocity
+                                         Vec3f.Zero,                       // Vec3f maxVelocity
+                                         6f,                               // float lifeLength = 1
+                                         0,                                // float gravityEffect = 1
+                                         0.5f,                             // float minSize = 1
+                                         0.5f,                             // float maxSize = 1
+                                         EnumParticleModel.Cube // EnumParticleModel model = EnumParticleModel.Cube)
+            );
+        p.WithTerrainCollision = false;
+        _capi.World.SpawnParticles(p);
+    }
+
+    private BlockPos omg() {
+        EntityPos pos = _capi.World.Player.Entity.Pos;
+        double yaw = pos.Yaw;
+        double adjustedYaw = yaw - Math.PI / 7;
+        _capi.ShowChatMessage($"yaw {yaw}, adjustedYaw {adjustedYaw}");
+        double dirX = Math.Sin(adjustedYaw);
+        double dirZ = Math.Cos(adjustedYaw);
+
+        BlockPos blockPos = pos.AsBlockPos.DownCopy();
+        blockPos.Y = (int)Math.Floor(pos.Y - 0.1);
+        BlockPos foundPos = null;
+
+        int maxDistance = 5;
+
+        for (float dist = 1; dist <= maxDistance; dist += 0.3f)
+        {
+            BlockPos tmpPos = new BlockPos(
+                (int)(blockPos.X + dirX * dist),
+                blockPos.Y,
+                (int)(blockPos.Z + dirZ * dist)
+            );
+
+            Vec3d p = new Vec3d(
+                (blockPos.X + dirX * dist),
+                blockPos.Y,
+                (blockPos.Z + dirZ * dist));
+            DebugDrawPoint(p);
+
+            Block block = _capi.World.BlockAccessor.GetBlock(tmpPos);
+
+            if (block.BlockMaterial == EnumBlockMaterial.Air) {
+                foundPos = tmpPos;
+                break;
+            }
+        }
+        return foundPos;
+    }
+
     static public BlockPos FindNextHorizontalPlacingPos(ICoreClientAPI capi) {
         EntityPos pos = capi.World.Player.Entity.Pos;
 
         BlockPos blockPos = pos.AsBlockPos.DownCopy();
         blockPos.Y = (int)Math.Floor(pos.Y - 0.1);
-        capi.ShowChatMessage($"OMG 10000 {blockPos.Y} {pos.Y}");
         BlockPos foundPos = null;
 
         double yaw = pos.Yaw;
@@ -132,7 +188,8 @@ public class SmartPlacement : ModSystem {
             dx = -1; // West
 
         for (int i = 1; i <= 5; i++) {
-            BlockPos checkPos = new BlockPos(blockPos.X + dx * i, blockPos.Y, blockPos.Z + dz * i);
+            int y = pos.Pitch < 3.3 ? blockPos.Y+i : blockPos.Y;
+            BlockPos checkPos = new BlockPos(blockPos.X + dx * i, y, blockPos.Z + dz * i);
             Block block = capi.World.BlockAccessor.GetBlock(checkPos);
 
             if (block.BlockMaterial == EnumBlockMaterial.Air) {
@@ -143,47 +200,28 @@ public class SmartPlacement : ModSystem {
         return foundPos;
     }
 
-
     private void SmartPlacementHighlightListener(float t) {
-        BlockPos pos = FindNextHorizontalPlacingPos(_capi);
-        _capi.ShowChatMessage($"OMG 1");
-        //int yellow = ColorUtil.ToRgba(150, 255, 255, 0);
+        // BlockPos pos = FindNextHorizontalPlacingPos(_capi);
+        BlockPos pos = omg();
         if (pos != null) {
-            _capi.ShowChatMessage($"OMG 2 found pos");
-            // _capi.World.HighlightBlocks(_capi.World.Player, _highlight_id, new List<BlockPos> { pos }, new List<int> {8} );
             _capi.World.HighlightBlocks(
                 _capi.World.Player, 
                 _highlight_id,
                 new List<BlockPos> { pos },
-                new List<int> { ColorUtil.ToRgba(50, 0, 160, 160) }, // Semi-transparent yellow
+                new List<int> { ColorUtil.ToRgba(50, 0, 160, 160) },
                 EnumHighlightBlocksMode.Absolute,
                 EnumHighlightShape.Arbitrary
             );
         }
 
         if (!_capi.Input.IsHotKeyPressed(SmartCursorKeybind.HOTKEY_SMARTCURSOR_PLACEMENT)) {
-            _capi.ShowChatMessage($"OMG 3 unregister");
             UnregisterListener();
         }
     }
 
-    // static public void PlaceActiveSlotAt(ICoreClientAPI capi, BlockPos targetPos) {
-    //     if (targetPos == null) {
-    //         return;
-    //     }
-    //     // Get the slot with the block you want to place
-    //     ItemSlot slot = capi.World.Player.InventoryManager.ActiveHotbarSlot;
-
-    //     capi.ShowChatMessage($"Slot: {slot != null}");
-    //     capi.ShowChatMessage($"ItemStack: {slot?.Itemstack != null}");
-    //     capi.ShowChatMessage($"Item: {slot?.Itemstack?.Collectible?.Code}");
-    //     capi.ShowChatMessage($"Target pos: {targetPos}");
-
-    //     IClientPlayer player = capi.World.Player;
-    // }
-
     public void SmartPlace() {
-        BlockPos pos = SmartPlacement.FindNextHorizontalPlacingPos(_capi);
+        // BlockPos pos = SmartPlacement.FindNextHorizontalPlacingPos(_capi);
+        BlockPos pos = omg();
         if (pos != null) {
             _capi.World.Player.Entity.StartAnimation("placeblock");
             _capi.World.RegisterCallback((dt) => { _capi.World.Player.Entity.StopAnimation("placeblock"); }, 120);
