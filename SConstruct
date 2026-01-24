@@ -1,5 +1,7 @@
 import subprocess
 import os
+from build_utils import git_version
+
 
 vars = Variables('.sconscache.py')
 home = os.environ.get("HOME")
@@ -22,22 +24,28 @@ vars.Add(
         PathVariable.PathAccept
     )
 )
+vars.Add(
+    BoolVariable(
+        'SMARTCURSOR_PLUS',
+        'Build with server side part',
+        False,   # default
+    )
+)
 
 env = Environment(variables=vars)
 vars.Update(env)
 vars.Save('.sconscache.py', env)
 env.Help(vars.GenerateHelpText(env))
 
-def git_version():
-    try:
-        return subprocess.check_output(
-            ["git", "describe", "--tags", "--always"],
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
-    except Exception:
-        return "unknown"
-
 env["GIT_VERSION"] = git_version()
+if env["SMARTCURSOR_PLUS"]:
+    env["WITH_SERVER"] = True
+    env["MOD_ID"] = "smartcursorplus"
+    env["MOD_NAME"] = "Smart cursor plus"
+else:
+    env["WITH_SERVER"] = False
+    env["MOD_ID"] = "smartcursor"
+    env["MOD_NAME"] = "Smart cursor"
 
 def run_cake(target, source, env):
     proc_env = os.environ.copy()
@@ -46,7 +54,8 @@ def run_cake(target, source, env):
         "dotnet",
         "run",
         "--project",
-        "./CakeBuild/CakeBuild.csproj"
+        "./CakeBuild/CakeBuild.csproj",
+        '-p:DefineConstants="WITH_SERVER"'
     ]
     subprocess.run(cmd, env=proc_env)
 
@@ -74,7 +83,7 @@ def run_program(target, source, env):
     cmd = [
         f"{env['VINTAGE_STORY']}/Vintagestory",
         "-o", "moddebug",
-        "--addModPath", "SmartCursor/bin/Release/Mods",
+        #"--addModPath", "SmartCursor/bin/Release/Mods",
     ]
 
     print("Running:", " ".join(cmd))
@@ -83,7 +92,12 @@ def run_program(target, source, env):
 modinfo = env.Substfile(
     target="SmartCursor/modinfo.json",
     source="SmartCursor/modinfo.json.in",
-    SUBST_DICT={"@GIT_VERSION@": env["GIT_VERSION"]}
+    SUBST_DICT={
+        "@GIT_VERSION@": env["GIT_VERSION"],
+        "@WITH_SERVER@": 'true' if env["WITH_SERVER"] else 'false' ,
+        "@MOD_ID@": env["MOD_ID"],
+        "@MOD_NAME@": env["MOD_NAME"],
+        }
 )
 
 env.Depends(smartcursor_release, modinfo)

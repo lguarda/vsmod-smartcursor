@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <OutputPath>bin\$(Configuration)\Mods\mod</OutputPath>
+    <DefineConstants>WITH_SERVER</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +28,10 @@
       <HintPath>$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <PackageReference Include="protobuf-net" Version="2.4.0">
+      <Private>False</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
