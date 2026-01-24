@@ -28,6 +28,10 @@ public class SmartPlacement : ModSystem {
 
     IClientNetworkChannel clientChannel;
     ICoreClientAPI _capi;
+
+    double _lastPlacementTime = 0;
+    const double PLACEMENT_REPEAT_MS = 240;
+
     const int _highlight_id = 42638;
     long _listener = -1;
     bool _toggle = false;
@@ -90,7 +94,11 @@ public class SmartPlacement : ModSystem {
             else if (action == EnumEntityAction.RightMouseDown) {
                 handled = EnumHandling.PreventDefault;
                 if (on) {
-                    SmartPlace();
+                   long currentTime = _capi.World.ElapsedMilliseconds;
+                    if (currentTime - _lastPlacementTime >= PLACEMENT_REPEAT_MS) {
+                        SmartPlace();
+                        _lastPlacementTime = currentTime;
+                    }
                 }
             }
         }
