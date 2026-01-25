@@ -24,13 +24,6 @@ vars.Add(
         PathVariable.PathAccept
     )
 )
-vars.Add(
-    BoolVariable(
-        'SMARTCURSOR_PLUS',
-        'Build with server side part',
-        False,   # default
-    )
-)
 
 env = Environment(variables=vars)
 vars.Update(env)
