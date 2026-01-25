@@ -132,7 +132,7 @@ def roslynator(target, source, env):
     cmd = [
         f"{home}/.dotnet/tools/roslynator",
         "analyze",
-        "SmartCursorPlus/SmartCursor.csproj",
+        "SmartCursorPlus/SmartCursorPlus.csproj",
     ]
     print("Running:", " ".join(cmd))
     subprocess.run(cmd, env=proc_env)

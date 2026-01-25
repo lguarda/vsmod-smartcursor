@@ -28,23 +28,47 @@ public class SmartPlacement : ModSystem {
 
     IClientNetworkChannel clientChannel;
     ICoreClientAPI _capi;
+    ICoreServerAPI _sapi;
 
     double _lastPlacementTime = 0;
     const double PLACEMENT_REPEAT_MS = 240;
 
-    const int _highlight_id = 42638;
+    const int _highlightId = 42638;
     long _listener = -1;
     bool _toggle = false;
+    float _pitchStairTrigger = 3.3f;
+
+    // Yeah so that the only way i found to get a rotated block that sucks
+    private int RotateBlock(Block block, string orientation) {
+        string path = block.Code.Path;
+
+        string rotatedPath = path.Replace("north", orientation);
+        rotatedPath = rotatedPath.Replace("east", orientation);
+        rotatedPath = rotatedPath.Replace("west", orientation);
+        rotatedPath = rotatedPath.Replace("south", orientation);
+        // Mod.Logger.Debug($"Rotated path {path} -> {rotatedPath}");
+
+        AssetLocation orientatedPath = new AssetLocation(block.Code.Domain, rotatedPath);
+
+        Block orientedBlock = _sapi.World.GetBlock(orientatedPath);
+        return orientedBlock.BlockId;
+    }
 
     public override void StartServerSide(ICoreServerAPI api) {
+        _sapi = api;
 
         api.Network.RegisterChannel("SmartCursor")
             .RegisterMessageType<PlaceBlockMsg>()
             .SetMessageHandler<PlaceBlockMsg>((player, msg) => {
                 BlockPos pos = new BlockPos(msg.X, msg.Y, msg.Z);
                 ItemSlot slot = player.InventoryManager.ActiveHotbarSlot;
-                if (slot?.Itemstack?.Block != null) {
-                    api.World.BlockAccessor.SetBlock(slot.Itemstack.Block.BlockId, pos);
+                Block block = slot?.Itemstack?.Block;
+
+                if (block != null) {
+
+                    string orientation = BlockFacing.HorizontalFromYaw(player.Entity.Pos.Yaw).Code;
+                    api.World.BlockAccessor.SetBlock(RotateBlock(block, orientation), pos);
+
                     slot.TakeOut(1);
                     slot.MarkDirty();
                 }
@@ -57,14 +81,14 @@ public class SmartPlacement : ModSystem {
             _listener = -1;
         }
         _toggle = false;
-        _capi.World.HighlightBlocks(_capi.World.Player, _highlight_id, new List<BlockPos>(), null);
+        _capi.World.HighlightBlocks(_capi.World.Player, _highlightId, new List<BlockPos>(), null);
     }
 
     private void RegisterListener() {
         if (_toggle == false) {
             UnregisterListener();
             _toggle = true;
-            _listener = _capi.Event.RegisterGameTickListener(SmartPlacementHighlightListener, 100);
+            _listener = _capi.Event.RegisterGameTickListener(HighlightListener, 100);
         }
     }
 
@@ -90,107 +114,66 @@ public class SmartPlacement : ModSystem {
         if (_capi.Input.IsHotKeyPressed(SmartCursorKeybind.HOTKEY_SMARTCURSOR_PLACEMENT)) {
             if (action == EnumEntityAction.InWorldRightMouseDown) {
                 handled = EnumHandling.PreventDefault;
-            }
-            else if (action == EnumEntityAction.RightMouseDown) {
+            } else if (action == EnumEntityAction.RightMouseDown) {
                 handled = EnumHandling.PreventDefault;
                 if (on) {
-                   long currentTime = _capi.World.ElapsedMilliseconds;
+                    long currentTime = _capi.World.ElapsedMilliseconds;
                     if (currentTime - _lastPlacementTime >= PLACEMENT_REPEAT_MS) {
-                        SmartPlace();
+                        PlaceBlock();
                         _lastPlacementTime = currentTime;
                     }
                 }
             }
         }
-
     }
 
-    void DebugDrawPoint(Vec3d pos) {
-        SimpleParticleProperties p =
-            new SimpleParticleProperties(1,                                // float minQuantity,
-                                         1,                                // float maxQuantity
-                                         ColorUtil.ToRgba(255, 255, 0, 0), // int color
-                                         pos,                              // Vec3d minPos
-                                         pos,                              // Vec3d maxPos
-                                         Vec3f.Zero,                       // Vec3f minVelocity
-                                         Vec3f.Zero,                       // Vec3f maxVelocity
-                                         6f,                               // float lifeLength = 1
-                                         0,                                // float gravityEffect = 1
-                                         0.5f,                             // float minSize = 1
-                                         0.5f,                             // float maxSize = 1
-                                         EnumParticleModel.Cube // EnumParticleModel model = EnumParticleModel.Cube)
-            );
-        p.WithTerrainCollision = false;
-        _capi.World.SpawnParticles(p);
-    }
-
-    private BlockPos omg() {
+    private BlockPos FindNextHorizontalPlacingPos() {
         EntityPos pos = _capi.World.Player.Entity.Pos;
-        double yaw = pos.Yaw;
-        double adjustedYaw = yaw - Math.PI / 7;
-        _capi.ShowChatMessage($"yaw {yaw}, adjustedYaw {adjustedYaw}");
-        double dirX = Math.Sin(adjustedYaw);
-        double dirZ = Math.Cos(adjustedYaw);
+        Vec3d dir = _capi.World.Player.Entity.Pos.GetViewVector().ToVec3d();
+        double dirX = dir.X;
+        double dirZ = dir.Z;
 
-        BlockPos blockPos = pos.AsBlockPos.DownCopy();
-        blockPos.Y = (int)Math.Floor(pos.Y - 0.1);
+        // the -0.1 is because on a block the position is 0.001
+        // so here it should work with hoe tile and slab
+        double posY = Math.Floor(pos.Y - 0.1);
         BlockPos foundPos = null;
 
-        int maxDistance = 5;
+#if DEBUG
+        SmartCursorUtils.RayTrace(_capi, new(pos.X, posY, pos.Z), new(dirX, 0, dirZ), 0.2, 7, (p) => {
+            SmartCursorUtils.DebugDrawPoint(_capi, p);
+            return false;
+        });
+#endif
 
-        for (float dist = 1; dist <= maxDistance; dist += 0.3f)
-        {
-            BlockPos tmpPos = new BlockPos(
-                (int)(blockPos.X + dirX * dist),
-                blockPos.Y,
-                (int)(blockPos.Z + dirZ * dist)
-            );
-
-            Vec3d p = new Vec3d(
-                (blockPos.X + dirX * dist),
-                blockPos.Y,
-                (blockPos.Z + dirZ * dist));
-            DebugDrawPoint(p);
-
+        SmartCursorUtils.RayTrace(_capi, new(pos.X, posY, pos.Z), new(dirX, 0, dirZ), 0.3, 5, (p) => {
+            BlockPos tmpPos = new BlockPos((int)p.X, (int)p.Y, (int)p.Z);
             Block block = _capi.World.BlockAccessor.GetBlock(tmpPos);
-
-            if (block.BlockMaterial == EnumBlockMaterial.Air) {
+            if (block != null && block.BlockMaterial == EnumBlockMaterial.Air) {
                 foundPos = tmpPos;
-                break;
+                return true;
             }
-        }
+            return false;
+        });
+
         return foundPos;
     }
 
-    static public BlockPos FindNextHorizontalPlacingPos(ICoreClientAPI capi) {
-        EntityPos pos = capi.World.Player.Entity.Pos;
+    // TODO better name
+    public BlockPos FindNextHorizontalPlacingPos2() {
+        EntityPos pos = _capi.World.Player.Entity.Pos;
 
         BlockPos blockPos = pos.AsBlockPos.DownCopy();
         blockPos.Y = (int)Math.Floor(pos.Y - 0.1);
         BlockPos foundPos = null;
 
         double yaw = pos.Yaw;
-        int dx = 0, dz = 0;
-
-        // Normalize to 0-2π
-        yaw = yaw % (2 * Math.PI);
-        if (yaw < 0)
-            yaw += 2 * Math.PI;
-
-        // Convert to cardinal direction
-        if (yaw < Math.PI / 4 || yaw >= 7 * Math.PI / 4)
-            dz = 1; // North
-        else if (yaw < 3 * Math.PI / 4)
-            dx = 1; // East
-        else if (yaw < 5 * Math.PI / 4)
-            dz = -1; // South
-        else
-            dx = -1; // West
+        Vec3i dir = BlockFacing.HorizontalFromYaw(_capi.World.Player.Entity.Pos.Yaw).Normali;
 
         for (int i = 1; i <= 5; i++) {
-            int y = pos.Pitch < 3.3 ? blockPos.Y+i : blockPos.Y;
-            BlockPos checkPos = new BlockPos(blockPos.X + dx * i, y, blockPos.Z + dz * i);
-            Block block = capi.World.BlockAccessor.GetBlock(checkPos);
+            // This is useless but i may use this instead of raytrace for horizontal block
+            int y = pos.Pitch < _pitchStairTrigger ? blockPos.Y + i : blockPos.Y;
+            BlockPos checkPos = new BlockPos(blockPos.X + dir.X * i, y, blockPos.Z + dir.Z * i);
+            Block block = _capi.World.BlockAccessor.GetBlock(checkPos);
 
             if (block.BlockMaterial == EnumBlockMaterial.Air) {
                 foundPos = checkPos;
@@ -200,18 +183,22 @@ public class SmartPlacement : ModSystem {
         return foundPos;
     }
 
-    private void SmartPlacementHighlightListener(float t) {
-        // BlockPos pos = FindNextHorizontalPlacingPos(_capi);
-        BlockPos pos = omg();
+    private BlockPos SmartPlacementGetPos() {
+        EntityPos pos = _capi.World.Player.Entity.Pos;
+
+        if (pos.Pitch > _pitchStairTrigger) {
+            return FindNextHorizontalPlacingPos();
+        } else {
+            return FindNextHorizontalPlacingPos2();
+        }
+    }
+
+    private void HighlightListener(float t) {
+        BlockPos pos = SmartPlacementGetPos();
         if (pos != null) {
-            _capi.World.HighlightBlocks(
-                _capi.World.Player, 
-                _highlight_id,
-                new List<BlockPos> { pos },
-                new List<int> { ColorUtil.ToRgba(50, 0, 160, 160) },
-                EnumHighlightBlocksMode.Absolute,
-                EnumHighlightShape.Arbitrary
-            );
+            _capi.World.HighlightBlocks(_capi.World.Player, _highlightId, new List<BlockPos> { pos },
+                                        new List<int> { ColorUtil.ToRgba(50, 0, 160, 160) },
+                                        EnumHighlightBlocksMode.Absolute, EnumHighlightShape.Arbitrary);
         }
 
         if (!_capi.Input.IsHotKeyPressed(SmartCursorKeybind.HOTKEY_SMARTCURSOR_PLACEMENT)) {
@@ -219,9 +206,17 @@ public class SmartPlacement : ModSystem {
         }
     }
 
-    public void SmartPlace() {
-        // BlockPos pos = SmartPlacement.FindNextHorizontalPlacingPos(_capi);
-        BlockPos pos = omg();
+    public void PlaceBlock() {
+        ItemSlot slot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
+
+        if (slot?.Itemstack?.Block == null) {
+            // if not block don't do anything for now
+            return;
+        }
+
+        // The highlight is only done each N ms so calculate the placement each time
+        // so it work if user flood click
+        BlockPos pos = SmartPlacementGetPos();
         if (pos != null) {
             _capi.World.Player.Entity.StartAnimation("placeblock");
             _capi.World.RegisterCallback((dt) => { _capi.World.Player.Entity.StopAnimation("placeblock"); }, 120);
