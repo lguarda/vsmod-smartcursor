@@ -1,9 +1,9 @@
 {
     "type": "code",
-    "modid": "smartcursor",
-    "name": "Smart cursor",
+    "modid": "@MOD_ID@",
+    "name": "@MOD_NAME@",
     "requiredOnClient": true,
-    "requiredOnServer": false,
+    "requiredOnServer": @WITH_SERVER@,
     "authors": [
         "lguarda"
     ],

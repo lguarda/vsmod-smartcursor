@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.0] - 2026-01-25
+### Added
+- Now when looking at caly work item, smart cursor will search for the suited clay in your inventory, it's kind of useless but i'm experimenting
+### Changed
+- SmartCursor is now split in two mod SmartCursor which is just client side smartcursor and SmartCursorPlus which include the same but also include the placement new placement mechanism
+### Added
+- Add two block placement mode available with default key <f+LeftClick> (i don't like this default but i don't know what to put here)
+- Add server side mod part to handle the new block placement (i didn't find a way to do it client side api is hard)
+
 ## [0.1.0] - 2026-01-08
 ### Added
 - new key bind to blacklist item in current active slot

@@ -5,9 +5,12 @@ using Vintagestory.API.Common.Entities;
 using System;
 using System.Collections.Generic;
 
+using Vintagestory.API.MathTools;
+
 namespace SmartCursor {
 
 public class SmartCursorModSystem : ModSystem {
+
     const string CONFIG_PATH = "smartcursor.json";
     const string HOTKEY_SMARTCURSOR = "smartcursor";
     const string HOTKEY_SMARTCURSOR_TOGGLE = "smartcursor toggle";
@@ -28,27 +31,18 @@ public class SmartCursorModSystem : ModSystem {
     Dictionary<EnumBlockMaterial, EnumTool[]> _materialTools;
     Dictionary<string, EnumTool[]> _domainTools;
 
-    private void RegisterKey(string keyCode, GlKeys key, bool altPressed = false, bool ctrlPressed = false,
-                             bool shiftPressed = false) {
-        string keybindDisplayName = Lang.Get($"smartcursor:{keyCode}");
-
-        _capi.Input.RegisterHotKey(keyCode, $"Smart cursor: {keybindDisplayName}", key, HotkeyType.GUIOrOtherControls,
-                                   altPressed, ctrlPressed, shiftPressed);
-        _capi.Input.SetHotKeyHandler(keyCode, (_) => true);
-    }
-
     private void HotKeyListener(string hotkeycode, KeyCombination keyComb) {
         switch (hotkeycode) {
-        case HOTKEY_SMARTCURSOR:
+        case SmartCursorKeybind.HOTKEY_SMARTCURSOR:
             StartSmartCursor(false);
             break;
-        case HOTKEY_SMARTCURSOR_TOGGLE:
+        case SmartCursorKeybind.HOTKEY_SMARTCURSOR_TOGGLE:
             StartSmartCursor(true);
             break;
-        case HOTKEY_SMARTCURSOR_ONE_SHOT:
+        case SmartCursorKeybind.HOTKEY_SMARTCURSOR_ONE_SHOT:
             PushTool();
             break;
-        case HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE:
+        case SmartCursorKeybind.HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE:
             BlackListItem();
             break;
         }
@@ -106,10 +100,11 @@ public class SmartCursorModSystem : ModSystem {
         parseDomainTools();
         parseMaterialTools();
 
-        RegisterKey(HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE, GlKeys.R, true, true);
-        RegisterKey(HOTKEY_SMARTCURSOR, GlKeys.R);
-        RegisterKey(HOTKEY_SMARTCURSOR_TOGGLE, GlKeys.R, true);
-        RegisterKey(HOTKEY_SMARTCURSOR_ONE_SHOT, GlKeys.Unknown);
+        SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE, GlKeys.R,
+                                             true, true);
+        SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR, GlKeys.R);
+        SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_TOGGLE, GlKeys.R, true);
+        SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_ONE_SHOT, GlKeys.Unknown);
         _capi.Input.AddHotkeyListener(HotKeyListener);
     }
     private bool SmartToolReload() {
@@ -119,8 +114,8 @@ public class SmartCursorModSystem : ModSystem {
 
         if (blockCode != _previousBlockCode) {
             ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
-            EnumTool[] tools = SmartToolSelector();
-            if (tools.Length > 0 && !IsRightTool(currentSlot, tools[0])) {
+            List<ItemMatcher> matchers = BuildMatcherList();
+            if (matchers.Count > 0 && !IsRightItem2(currentSlot, matchers)) {
                 PopTool();
                 _isSmartToolHeld = PushTool();
                 return true;
@@ -132,7 +127,7 @@ public class SmartCursorModSystem : ModSystem {
         if (!_isToggleMode) {
 
             // When not in toggle mode and hotkey was released pop tool
-            if (!_capi.Input.IsHotKeyPressed(HOTKEY_SMARTCURSOR)) {
+            if (!_capi.Input.IsHotKeyPressed(SmartCursorKeybind.HOTKEY_SMARTCURSOR)) {
                 PopTool();
                 UnregisterSmartToolStopListListener();
                 return;
@@ -162,47 +157,6 @@ public class SmartCursorModSystem : ModSystem {
         }
     }
 
-    private EnumTool[] SmartToolSelectorEntity() {
-        EntitySelection es = _capi.World.Player.CurrentEntitySelection;
-
-        if (es != null) {
-            Entity entity = es.Entity;
-            if (!entity.Alive) {
-                return [EnumTool.Knife];
-            }
-        }
-        return [];
-    }
-
-    // This function return tool based on targeted block
-    private EnumTool[] SmartToolSelector() {
-        // TODO clean this
-        EnumTool[] tools = SmartToolSelectorEntity();
-        if (tools.Length > 0) {
-            return tools;
-        }
-        BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
-
-        if (bs == null) {
-            return [];
-        }
-
-        Block block = _capi.World.BlockAccessor.GetBlock(bs.Position);
-        //_capi.ShowChatMessage($"Material {block.BlockMaterial}");
-        _previousBlockCode = block?.Code?.Path;
-        string prefix = _previousBlockCode is string p ? (p.IndexOf('-') is int i && i >= 0 ? p[..i] : p) : null;
-
-        if (_domainTools.TryGetValue(prefix, out tools)) {
-            return tools;
-        }
-
-        if (_materialTools.TryGetValue(block.BlockMaterial, out tools)) {
-            return tools;
-        }
-
-        return [];
-    }
-
     private bool SwapItemSlot() {
         IInventory hotbar = _capi.World.Player.InventoryManager.GetOwnInventory(GlobalConstants.hotBarInvClassName);
         IInventory inventory = _capi.World.Player.InventoryManager.GetOwnInventory(_savedSlotInventoryName);
@@ -214,28 +168,20 @@ public class SmartCursorModSystem : ModSystem {
         return true;
     }
 
-    private bool IsRightTool(ItemSlot slot, EnumTool toolType) {
-        EnumTool? currentTool = slot?.Itemstack?.Collectible?.Tool;
-        return currentTool == toolType && !isItemBlackListed(slot);
+    private bool IsRightItem(ItemSlot slot, ItemMatcher matcher) {
+        return !isItemBlackListed(slot) && matcher.Matches(slot);
     }
 
-    private int FindToolSlotInInventory(EnumTool toolType, IInventory inventory) {
-        for (int i = 0; i < inventory.Count; i++) {
-            if (IsRightTool(inventory[i], toolType)) {
-                return i;
+    private bool IsRightItem2(ItemSlot slot, List<ItemMatcher> matchers) {
+        foreach (var matcher in matchers) {
+            if (!isItemBlackListed(slot) && matcher.Matches(slot)) {
+                return true;
             }
         }
-        return -1;
+        return false;
     }
 
-    private bool SwapTool(string inventoryName, EnumTool toolType, ItemSlot currentSlot) {
-        IInventory inventory = _capi.World.Player.InventoryManager.GetOwnInventory(inventoryName);
-        if (inventory == null) {
-            return false;
-        }
-
-        int slotNumber = FindToolSlotInInventory(toolType, inventory);
-
+    private bool SwapItemSlotSaved(string inventoryName, int slotNumber) {
         if (slotNumber < 0) {
             return false;
         }
@@ -267,22 +213,135 @@ public class SmartCursorModSystem : ModSystem {
         }
     }
 
-    private bool PushTool() {
-        ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
-        EnumTool[] tools = SmartToolSelector();
 
-        if (tools.Length == 0) {
+    private int FindToolSlotInInventory(ItemMatcher matcher, IInventory inventory) {
+        for (int i = 0; i < inventory.Count; i++) {
+            if (IsRightItem(inventory[i], matcher)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private bool SwapItemName(string inventoryName, ItemMatcher matcher) {
+        IInventory inventory = _capi.World.Player.InventoryManager.GetOwnInventory(inventoryName);
+        if (inventory == null) {
             return false;
         }
-        for (int i = 0; i < tools.Length; i++) {
-            // First Stop if the current tool is the right one
-            if (IsRightTool(currentSlot, tools[i])) {
+
+        int slotNumber = FindToolSlotInInventory(matcher, inventory);
+
+        return SwapItemSlotSaved(inventoryName, slotNumber);
+    }
+
+    private string GetWorkItem(BlockPos pos) {
+        BlockEntity be = _capi.World.BlockAccessor.GetBlockEntity(pos);
+        if (be != null) {
+            var workItemField = be.GetType().GetField("workItemStack", System.Reflection.BindingFlags.NonPublic |
+                                                                           System.Reflection.BindingFlags.Instance);
+
+            if (workItemField != null) {
+                ItemStack workItem = workItemField.GetValue(be) as ItemStack;
+                if (workItem != null) {
+                    string path = workItem.Collectible.Code.Path; // Should contain clay type
+                    return path;
+                }
+            }
+        }
+        return null;
+    }
+
+    // This is huge bull shilt
+    static private string SelectItemFromWorkItem(string workItem) {
+        switch (workItem) {
+        case "clayworkitem-fire":
+            return "clay-fire";
+        case "clayworkitem-red":
+            return "clay-red";
+        case "clayworkitem-blue":
+            return "clay-blue";
+        default:
+            return null;
+        }
+    }
+
+    private void AddWorkedItemMatcher(List<ItemMatcher> matchers) {
+        BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
+
+        string workItem = GetWorkItem(bs.Position);
+        if (workItem != null) {
+            string itemName = SelectItemFromWorkItem(workItem);
+            if (itemName != null) {
+                matchers.Add(new ItemCodeMatcher(itemName));
+            }
+        }
+    }
+
+    private void AddEntityMatcher(List<ItemMatcher> matchers) {
+        EntitySelection es = _capi.World.Player.CurrentEntitySelection;
+
+        if (es != null) {
+            Entity entity = es.Entity;
+            _capi.ShowChatMessage($"Entity {entity.GetName()} {!entity.Alive}");
+            if (!entity.Alive) {
+                _capi.ShowChatMessage($"Entity ADDED KIFE");
+                matchers.Add(new ToolTypeMatcher(EnumTool.Knife));
+            }
+        }
+    }
+
+    // This function return tool based on targeted block
+    private void AddToolTypeMatcher(List<ItemMatcher> matchers) {
+        BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
+
+        Block block = _capi.World.BlockAccessor.GetBlock(bs.Position);
+        _capi.ShowChatMessage($"Material {block.BlockMaterial}");
+        _previousBlockCode = block?.Code?.Path;
+        _capi.ShowChatMessage($"path {_previousBlockCode}");
+
+        string prefix = _previousBlockCode is string p ? (p.IndexOf('-') is int i && i >= 0 ? p[..i] : p) : null;
+
+        EnumTool[] tools;
+        if (_domainTools.TryGetValue(prefix, out tools)) {
+        } else if (_materialTools.TryGetValue(block.BlockMaterial, out tools)) {
+        }
+        foreach (var tool in tools) {
+            matchers.Add(new ToolTypeMatcher(tool));
+        }
+
+        return ;
+    }
+
+    private List<ItemMatcher> BuildMatcherList() {
+        List<ItemMatcher> matchers = new List<ItemMatcher>();
+
+        AddEntityMatcher(matchers);
+
+        BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
+
+        if (bs != null) {
+            AddWorkedItemMatcher(matchers);
+            AddToolTypeMatcher(matchers);
+        }
+
+        return matchers;
+    }
+
+    private bool PushTool() {
+        ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
+        List<ItemMatcher> matchers = BuildMatcherList();
+        if (matchers == null || matchers.Count == 0) {
+            return false;
+        }
+
+        foreach (var matcher in matchers) {
+            if (matcher.Matches(currentSlot)) {
                 return false;
             }
 
             // Search on each inventory configured in inventories order matter
             for (int j = 0; j < _config.inventories.Length; j++) {
-                if (SwapTool(_config.inventories[j], tools[i], currentSlot)) {
+                if (SwapItemName(_config.inventories[j], matcher)) {
                     return true;
                 }
             }
@@ -300,6 +359,12 @@ public class SmartCursorModSystem : ModSystem {
         if (_isSmartToolHeld) {
             _isSmartToolHeld = false;
             SwapItemSlot();
+        }
+    }
+
+    private void DebugHighlightBlock(BlockPos pos) {
+        if (pos != null) {
+            _capi.World.HighlightBlocks(_capi.World.Player, 123, new List<BlockPos> { pos });
         }
     }
 

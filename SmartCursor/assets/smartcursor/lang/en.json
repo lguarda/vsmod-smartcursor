@@ -2,5 +2,6 @@
     "smartcursor": "hold",
     "smartcursor toggle": "toggle",
     "smartcursor one shot": "one shot",
-    "smartcursor blacklist toggle": "blacklist"
+    "smartcursor blacklist toggle": "blacklist",
+    "smartcursor block placement": "placement"
 }
