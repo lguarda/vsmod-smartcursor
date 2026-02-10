@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.1] - 2026-02-10
+### Fixed
+- Fix crash when using smartcursor on unlisted material
+
 ## [0.2.0] - 2026-01-25
 ### Added
 - Now when looking at caly work item, smart cursor will search for the suited clay in your inventory, it's kind of useless but i'm experimenting
