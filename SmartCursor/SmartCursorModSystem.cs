@@ -305,8 +305,10 @@ public class SmartCursorModSystem : ModSystem {
         if (_domainTools.TryGetValue(prefix, out tools)) {
         } else if (_materialTools.TryGetValue(block.BlockMaterial, out tools)) {
         }
-        foreach (var tool in tools) {
-            matchers.Add(new ToolTypeMatcher(tool));
+        if (tools != null) {
+            foreach (var tool in tools) {
+                matchers.Add(new ToolTypeMatcher(tool));
+            }
         }
 
         return ;
