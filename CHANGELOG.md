@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.2] - 2026-03-09
+### Changed
+- Nothing changed but this is the version compatible with 1.22 which require dotnet 10
+
 ## [0.2.2] - 2026-03-09
 ### Fixed
 - Remove chat debug log
