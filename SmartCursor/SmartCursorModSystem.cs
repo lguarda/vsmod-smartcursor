@@ -282,9 +282,8 @@ public class SmartCursorModSystem : ModSystem {
 
         if (es != null) {
             Entity entity = es.Entity;
-            _capi.ShowChatMessage($"Entity {entity.GetName()} {!entity.Alive}");
+            // _capi.ShowChatMessage($"Entity {entity.GetName()} {!entity.Alive}");
             if (!entity.Alive) {
-                _capi.ShowChatMessage($"Entity ADDED KIFE");
                 matchers.Add(new ToolTypeMatcher(EnumTool.Knife));
             }
         }
@@ -295,9 +294,9 @@ public class SmartCursorModSystem : ModSystem {
         BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
 
         Block block = _capi.World.BlockAccessor.GetBlock(bs.Position);
-        _capi.ShowChatMessage($"Material {block.BlockMaterial}");
+        // _capi.ShowChatMessage($"Material {block.BlockMaterial}");
         _previousBlockCode = block?.Code?.Path;
-        _capi.ShowChatMessage($"path {_previousBlockCode}");
+        // _capi.ShowChatMessage($"path {_previousBlockCode}");
 
         string prefix = _previousBlockCode is string p ? (p.IndexOf('-') is int i && i >= 0 ? p[..i] : p) : null;
 
