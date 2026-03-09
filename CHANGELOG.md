@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.2] - 2026-03-09
+### Fixed
+- Remove chat debug log
+
 ## [0.2.1] - 2026-02-10
 ### Fixed
 - Fix crash when using smartcursor on unlisted material
