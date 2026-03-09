@@ -24,7 +24,16 @@ vars.Add(
         PathVariable.PathAccept
     )
 )
-
+vars.Add(
+    EnumVariable(
+        "DOTNET_VERS",
+        help="Used dotnet version which depends on vs release",
+        default="net8.0",
+        allowed_values=("net8.0", "net10.0"),
+        map={},
+        ignorecase=0,  # case-sensitive
+    ),
+)
 env = Environment(variables=vars)
 vars.Update(env)
 vars.Save('.sconscache.py', env)
@@ -33,10 +42,10 @@ env.Help(vars.GenerateHelpText(env))
 env["GIT_VERSION"] = git_version()
 
 def smartcursor_cake(target, source, env):
-    dotnet_run("./CakeBuild/CakeBuild.csproj", str(env["VINTAGE_STORY"]))
+    dotnet_run("./CakeBuild/CakeBuild.csproj", str(env["VINTAGE_STORY"]), str(env["DOTNET_VERS"]))
 
 def smartcursorplus_cake(target, source, env):
-    dotnet_run("./CakeBuildPlus/CakeBuild.csproj", str(env["VINTAGE_STORY"]))
+    dotnet_run("./CakeBuildPlus/CakeBuild.csproj", str(env["VINTAGE_STORY"]), str(env["DOTNET_VERS"]))
 
 smartcursor_sources = Glob("SmartCursor/*.cs")
 smartcursorplus_sources = Glob("SmartCursorPlus/*.cs")
@@ -71,6 +80,7 @@ def run_program(target, source, env):
     cmd = [
         f"{env['VINTAGE_STORY']}/Vintagestory",
         "-o", "moddebug",
+        "--dataPath", str(env["VINTAGE_STORY_DATA"]),
     ]
 
     print("Running:", " ".join(cmd))
