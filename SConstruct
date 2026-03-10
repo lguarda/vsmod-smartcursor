@@ -1,6 +1,6 @@
 import subprocess
 import os
-from build_utils import git_version, dotnet_run
+from build_utils import git_version, dotnet_run, vs_run
 
 
 vars = Variables('.sconscache.py')
@@ -77,15 +77,7 @@ env.Alias("install", smartcursor_install_release)
 env.Alias("sinstall", smartcursorplus_install_release)
 
 def run_program(target, source, env):
-    cmd = [
-        f"{env['VINTAGE_STORY']}/Vintagestory",
-        "-o", "moddebug",
-        "--dataPath", str(env["VINTAGE_STORY_DATA"]),
-    ]
-
-    print("Running:", " ".join(cmd))
-    subprocess.run(cmd)
-
+    vs_run(env)
 
 smartcursor_modinfo = env.Substfile(
     target="SmartCursor/modinfo.json",
