@@ -148,7 +148,11 @@ public class SmartPlacement : ModSystem {
         SmartCursorUtils.RayTrace(_capi, new(pos.X, posY, pos.Z), new(dirX, 0, dirZ), 0.3, 5, (p) => {
             BlockPos tmpPos = new BlockPos((int)p.X, (int)p.Y, (int)p.Z);
             Block block = _capi.World.BlockAccessor.GetBlock(tmpPos);
-            if (block != null && block.BlockMaterial == EnumBlockMaterial.Air) {
+             _capi.ShowChatMessage($"mat {block.BlockMaterial} {block?.Code?.Path}");
+
+            // see https://apidocs.vintagestory.at/api/Vintagestory.API.Common.Block.html?q=Block#Vintagestory_API_Common_Block_Replaceable
+            // 6000 is the limit for tallgrass, then it include water lava and air of course
+            if (block?.Replaceable >= 6000) {
                 foundPos = tmpPos;
                 return true;
             }
