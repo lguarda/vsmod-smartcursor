@@ -286,49 +286,6 @@ public class SmartCursorModSystem : ModSystem {
         return SwapItemSlotSaved(inventoryName, slotNumber);
     }
 
-    private string GetWorkItem(BlockPos pos) {
-        BlockEntity be = _capi.World.BlockAccessor.GetBlockEntity(pos);
-        if (be != null) {
-            var workItemField = be.GetType().GetField("workItemStack", System.Reflection.BindingFlags.NonPublic |
-                                                                           System.Reflection.BindingFlags.Instance);
-
-            if (workItemField != null) {
-                ItemStack workItem = workItemField.GetValue(be) as ItemStack;
-                if (workItem != null) {
-                    string path = workItem.Collectible.Code.Path; // Should contain clay type
-                    return path;
-                }
-            }
-        }
-        return null;
-    }
-
-    // This is huge bull shilt
-    static private string SelectItemFromWorkItem(string workItem) {
-        switch (workItem) {
-        case "clayworkitem-fire":
-            return "clay-fire";
-        case "clayworkitem-red":
-            return "clay-red";
-        case "clayworkitem-blue":
-            return "clay-blue";
-        default:
-            return null;
-        }
-    }
-
-    private void AddWorkedItemMatcher(List<ItemMatcher> matchers) {
-        BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
-
-        string workItem = GetWorkItem(bs.Position);
-        if (workItem != null) {
-            string itemName = SelectItemFromWorkItem(workItem);
-            if (itemName != null) {
-                matchers.Add(new ItemCodeMatcher(itemName));
-            }
-        }
-    }
-
     private void AddEntityMatcher(List<ItemMatcher> matchers) {
         EntitySelection es = _capi.World.Player.CurrentEntitySelection;
 
@@ -378,7 +335,7 @@ public class SmartCursorModSystem : ModSystem {
             }
             FirePitMatcher.Add(matchers, _capi);
             BloomeryMatcher.Add(matchers, _capi);
-            AddWorkedItemMatcher(matchers);
+            WorkedItemMatcher.Add(matchers, _capi);
             AddToolTypeMatcher(matchers);
         }
 
