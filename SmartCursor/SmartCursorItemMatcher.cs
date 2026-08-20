@@ -3,8 +3,10 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Common.Entities;
+using Vintagestory.GameContent;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 using Vintagestory.API.MathTools;
 
@@ -27,6 +29,25 @@ public class ItemCodeMatcher : ItemMatcher {
     public ItemCodeMatcher(string itemCode) { this.itemCode = itemCode; }
 
     public override bool Matches(ItemSlot slot) { return slot?.Itemstack?.Collectible?.Code?.Path == itemCode; }
+}
+
+public class BuildStageMaterialMatcher : ItemMatcher {
+    private readonly BuildStageMaterial[] materials;
+
+    public BuildStageMaterialMatcher(BuildStageMaterial[] materials) { this.materials = materials; }
+
+    public override bool Matches(ItemSlot slot) {
+        if (slot?.Itemstack == null) {
+            return false;
+        }
+
+        foreach (var mat in materials) {
+            if (mat.ItemStack.Satisfies(slot.Itemstack)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
 
 }

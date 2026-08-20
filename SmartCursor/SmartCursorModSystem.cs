@@ -2,6 +2,7 @@
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Common.Entities;
+using Vintagestory.GameContent;
 using System;
 using System.Collections.Generic;
 
@@ -107,12 +108,45 @@ public class SmartCursorModSystem : ModSystem {
         SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_ONE_SHOT, GlKeys.Unknown);
         _capi.Input.AddHotkeyListener(HotKeyListener);
     }
-    private bool SmartToolReload() {
+
+    private string GetCurrentSelectionSignature() {
         BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
-        Block block = bs != null ? _capi.World.BlockAccessor.GetBlock(bs.Position) : null;
+        if (bs == null) {
+            return null;
+        }
+
+        Block block = _capi.World.BlockAccessor.GetBlock(bs.Position);
+        if (block == null) {
+            return null;
+        }
         string blockCode = block?.Code?.Path;
 
-        if (blockCode != _previousBlockCode) {
+        var be = _capi.World.BlockAccessor.GetBlockEntity(bs.Position);
+
+        if (be is BlockEntityPitKiln pk) {
+            int stage = (int)typeof(BlockEntityPitKiln)
+                            .GetField("currentBuildStage", System.Reflection.BindingFlags.NonPublic |
+                                                               System.Reflection.BindingFlags.Instance)
+                            .GetValue(pk);
+            return $"{blockCode}|stage={stage}|complete={pk.IsComplete}|lit={pk.Lit}";
+        }
+
+        if (be is BlockEntityGroundStorage gs) {
+            // change whenever slot contents change (e.g. clay appears/disappears)
+            int hash = 17;
+            foreach (var slot in gs.Inventory)
+                hash = hash * 31 + (slot.Empty ? 0 : slot.Itemstack.Collectible.Code.GetHashCode());
+            return $"{blockCode}|gs={hash}";
+        }
+
+        return blockCode;
+    }
+
+    private bool SmartToolReload() {
+        string selSign = GetCurrentSelectionSignature();
+
+        if (selSign != _previousBlockCode) {
+            _previousBlockCode = GetCurrentSelectionSignature();
             ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
             List<ItemMatcher> matchers = BuildMatcherList();
             if (matchers.Count > 0 && !IsRightItem2(currentSlot, matchers)) {
@@ -213,7 +247,6 @@ public class SmartCursorModSystem : ModSystem {
         }
     }
 
-
     private int FindToolSlotInInventory(ItemMatcher matcher, IInventory inventory) {
         for (int i = 0; i < inventory.Count; i++) {
             if (IsRightItem(inventory[i], matcher)) {
@@ -294,11 +327,8 @@ public class SmartCursorModSystem : ModSystem {
         BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
 
         Block block = _capi.World.BlockAccessor.GetBlock(bs.Position);
-        // _capi.ShowChatMessage($"Material {block.BlockMaterial}");
-        _previousBlockCode = block?.Code?.Path;
-        // _capi.ShowChatMessage($"path {_previousBlockCode}");
 
-        string prefix = _previousBlockCode is string p ? (p.IndexOf('-') is int i && i >= 0 ? p[..i] : p) : null;
+        string prefix = block?.Code?.Path is string p ? (p.IndexOf('-') is int i && i >= 0 ? p[..i] : p) : null;
 
         EnumTool[] tools;
         if (_domainTools.TryGetValue(prefix, out tools)) {
@@ -310,7 +340,7 @@ public class SmartCursorModSystem : ModSystem {
             }
         }
 
-        return ;
+        return;
     }
 
     private List<ItemMatcher> BuildMatcherList() {
@@ -321,6 +351,7 @@ public class SmartCursorModSystem : ModSystem {
         BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
 
         if (bs != null) {
+            FirePitMatcher.GetFirePitMatcher(matchers, _capi);
             AddWorkedItemMatcher(matchers);
             AddToolTypeMatcher(matchers);
         }
@@ -369,7 +400,19 @@ public class SmartCursorModSystem : ModSystem {
         }
     }
 
+    // void ShowHeldItemCode()
+    //{
+    //     var slot = _capi.World.Player.Entity.RightHandItemSlot;
+    //     if (slot?.Itemstack == null) {
+    //         _capi.ShowChatMessage("[SmartCursor] Hand is empty");
+    //         return;
+    //     }
+    //     _capi.Logger.Notification($"[SmartCursor] Held: {slot.Itemstack.Collectible.Code.Path}");
+    //     _capi.ShowChatMessage($"[SmartCursor] Held: {slot.Itemstack.Collectible.Code.Path}");
+    // }
+
     private void StartSmartCursor(bool mode) {
+        // ShowHeldItemCode();
         _isToggleMode = mode;
         if (!_isSmartToolHeld) {
             UnregisterSmartToolStopListListener();
