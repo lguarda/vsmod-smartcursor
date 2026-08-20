@@ -49,6 +49,12 @@ public class PitKilnRule : AbstractRule {
         return stageMaterials;
     }
 
+    public bool IsRawClayItem(string path)
+    {
+        if (path == null) return false;
+        return path.Split('-').Any(t => t == "raw");
+    }
+
     public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be, ItemStack item) {
         if (be is BlockEntityPitKiln pk) {
             if (!pk.IsComplete) {
@@ -58,9 +64,9 @@ public class PitKilnRule : AbstractRule {
             }
         } else if (be is BlockEntityGroundStorage gs) {
             foreach (var slot in gs.Inventory) {
-                if (slot?.Itemstack?.Collectible?.Code?.Path != null) {
-                    // TODO may be it's not enough
-                    if (!(slot?.Itemstack?.Collectible?.Code?.Path?.EndsWith("-raw") ?? false)) {
+                string path = slot?.Itemstack?.Collectible?.Code?.Path;
+                if (path != null) {
+                    if (!IsRawClayItem(path)) {
                         return;
                     }
                 }
