@@ -124,10 +124,8 @@ public class SmartCursorModSystem : ModSystem {
         var be = _capi.World.BlockAccessor.GetBlockEntity(bs.Position);
 
         if (be is BlockEntityPitKiln pk) {
-            int stage = (int)typeof(BlockEntityPitKiln)
-                            .GetField("currentBuildStage", System.Reflection.BindingFlags.NonPublic |
-                                                               System.Reflection.BindingFlags.Instance)
-                            .GetValue(pk);
+            int stage = FirePitReflection.GetCurrentBuildStage(pk);
+
             return $"{blockCode}|stage={stage}|complete={pk.IsComplete}|lit={pk.Lit}";
         }
 
@@ -138,23 +136,43 @@ public class SmartCursorModSystem : ModSystem {
                 hash = hash * 31 + (slot.Empty ? 0 : slot.Itemstack.Collectible.Code.GetHashCode());
             return $"{blockCode}|gs={hash}";
         }
+        if (be is BlockEntityBloomery bloomery) {
+            var (fuelSlot, oreSlot, outSlot) = BloomeryReflection.GetSlots(bloomery);
+            int oreCapacity = BloomeryReflection.GetOreCapacity(bloomery);
+            bool oreFull = oreSlot.StackSize >= oreCapacity;
+
+            return $"{blockCode}|oreFull={oreFull}|canIgnite={bloomery.CanIgnite()}|burning={bloomery.IsBurning}|hasOut={outSlot.StackSize > 0}";
+        }
 
         return blockCode;
     }
 
     private bool SmartToolReload() {
         string selSign = GetCurrentSelectionSignature();
+        ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
 
-        if (selSign != _previousBlockCode) {
-            _previousBlockCode = GetCurrentSelectionSignature();
-            ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
-            List<ItemMatcher> matchers = BuildMatcherList();
-            if (matchers.Count > 0 && !IsRightItem2(currentSlot, matchers)) {
-                PopTool();
-                _isSmartToolHeld = PushTool();
-                return true;
-            }
+        bool selectionChanged = selSign != _previousBlockCode;
+        bool handDepleted = _isSmartToolHeld && currentSlot.Empty;
+
+        if (!selectionChanged && !handDepleted) {
+            return false;
         }
+
+        _previousBlockCode = selSign;
+
+        if (handDepleted) {
+            // restore whatever was in the slot before our last swap, then re-evaluate fresh
+            PopTool();
+            currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
+        }
+
+        List<ItemMatcher> matchers = BuildMatcherList();
+        if (matchers.Count > 0 && !IsRightItem2(currentSlot, matchers)) {
+            PopTool(); // no-op if handDepleted branch already popped
+            _isSmartToolHeld = PushTool();
+            return true;
+        }
+
         return false;
     }
     private void SmartToolStopListListener(float t) {
@@ -327,8 +345,9 @@ public class SmartCursorModSystem : ModSystem {
         BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
 
         Block block = _capi.World.BlockAccessor.GetBlock(bs.Position);
+        if (block == null) return;
 
-        string prefix = block?.Code?.Path is string p ? (p.IndexOf('-') is int i && i >= 0 ? p[..i] : p) : null;
+        string prefix = block.Code?.Path is string p ? (p.IndexOf('-') is int i && i >= 0 ? p[..i] : p) : null;
 
         EnumTool[] tools;
         if (_domainTools.TryGetValue(prefix, out tools)) {
@@ -352,6 +371,7 @@ public class SmartCursorModSystem : ModSystem {
 
         if (bs != null) {
             FirePitMatcher.GetFirePitMatcher(matchers, _capi);
+            BloomeryMatcher.GetBloomeryMatcher(matchers, _capi);
             AddWorkedItemMatcher(matchers);
             AddToolTypeMatcher(matchers);
         }
