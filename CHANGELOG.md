@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0] - 2026-XX
+
+### Changed
+- Internal code refactor into "Rules" to make it easier to add more interactions.
+### Added
+- New "Rules" to bring up items based on what's targeted.
+- Bloomery: will sequentially bring up ore -> fuel -> torch.
+- Crock: will bring up beeswax or bowl.
+- PitKiln: will sequentially bring up drygrass -> stick -> fuel.
+- Unlit torch: will bring up lit torch.
+
 ## [0.3.2] - 2026-03-09
 ### Changed
 - Nothing changed but this is the version compatible with 1.22 which require dotnet 10
