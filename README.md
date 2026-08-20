@@ -3,25 +3,18 @@
 # SmartCursor Vs mod
 This is a Vintagestory client side mode which aim to implement the smart cursor feature from Terraria (In Terraria it's actually named smart cursor)
 
-# SmartCursorPlus
-I didn't find a way to place block from client side, so SmartCursorPlus is not only client side it's also server side
-It's goal is the implement kind of the same behavior as the smart placement in Terraria, but a little bit different since block placement is not absolute in VS like it is in Terraria
-In VS we need, to target a block face then the block we place will be placed next to the face we pointed, which is really annoying for stairs and roof for example, look at the gif it show better how it work.
-
 # How it Works
-SmartCursor automatically selects the most appropriate tool based on what you are looking at.
+SmartCursor automatically selects the most appropriate tool(or item) based on what you are looking at.
 
 When the keybind is pressed, the mod analyzes:
-- the targeted entity (if any currently only support dead corps to pop the knife)
-- otherwise the targeted block
+- the targeted entities (corpes, firepit)
+- the targeted block
 
 Based on this analysis, it determines the preferred tool
 (axe, pickaxe, hammer, knife, shovel, scythe, shears, etc.).
 
-![wa](demo/vsmod-smartcursor-demo.gif)
-![zaa](demo/vsmod-smartcursor-continuous-demo.gif)
+![wa](vsmod-smartcursor-full-demo.gif)
 ![aaaa](demo/vsmod-smartcursor-demo-inventory-swap.gif)
-![carendouf](demo/vsmod-smartcursor-placement-demo.gif)
 
 ### Tool selection order
 1. there's some hard-coded stuff like dead entity pop the knife and worked clay will pop the need clay type (only when present of course)
@@ -48,8 +41,6 @@ Based on this analysis, it determines the preferred tool
   Press once to activate SmartCursor, press again to restore the previous item.
 - **One-shot mode**: (default 'None')
   Press once to select the correct tool and keep it; SmartCursor will not swap it back automatically.
-- **Placement**: (default 'f') **Only with SmartCursorPlus**
-  Press once to select you will see where block will be placed when you click, when the pich is above the horizon (kind of), it trigger the stair placement mod
 
 ### Restore behavior
 - When SmartCursor deactivates (key released or toggle off), the original item is restored to its original slot.
