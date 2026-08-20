@@ -14,11 +14,15 @@ public class SmartCursorConfig {
     public Dictionary<string, string[]> domainTools = new Dictionary<string, string[]>();
     public string[] inventories;
     public bool continuousMode;
+    public bool extended_rule;
 
     public SmartCursorConfig() {
         // Set the default value
         continuousMode = true;
         itemBlackList = new() {};
+
+        // All other non tool related smartcursor interaction
+        extended_rule = true;
 
         inventories = new string[] {
             "toolbelt",                           // salty's toolbelt

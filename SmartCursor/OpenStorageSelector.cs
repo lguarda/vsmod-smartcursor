@@ -54,6 +54,9 @@ public class OpenStorageSelector {
 
     public static ItemSlot GetTargetedStorageItem(ICoreClientAPI capi) {
         BlockSelection sel = capi.World.Player.CurrentBlockSelection;
+        if (sel == null) {
+            return null;
+        }
         var be = capi.World.BlockAccessor.GetBlockEntity(sel.Position);
 
         if (be is BlockEntityGroundStorage gs) {

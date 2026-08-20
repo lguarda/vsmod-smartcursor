@@ -26,6 +26,8 @@ public class SmartCursorModSystem : ModSystem {
     bool _isToggleMode;
     long _listener = -1;
 
+    List<AbstractRule> rules = new List<AbstractRule>();
+
     string _previousBlockCode;
 
     SmartCursorConfig _config;
@@ -62,35 +64,6 @@ public class SmartCursorModSystem : ModSystem {
         }
     }
 
-    private EnumTool[] StringsToEnumToolArray(string[] tools) {
-        EnumTool[] result = new EnumTool[tools.Length];
-
-        for (int i = 0; i < tools.Length; i++) {
-            if (!Enum.TryParse(tools[i], ignoreCase: true, out result[i])) {
-                Mod.Logger.Notification($"Invalid tool enum: {tools[i]}");
-            }
-        }
-
-        return result;
-    }
-    private void parseMaterialTools() {
-        _materialTools = new Dictionary<EnumBlockMaterial, EnumTool[]>();
-        foreach (var kv in _config.materialTools) {
-            EnumBlockMaterial material;
-            if (Enum.TryParse(kv.Key, ignoreCase: true, out material)) {
-                _materialTools[material] = StringsToEnumToolArray(kv.Value);
-            }
-        }
-    }
-
-    private void parseDomainTools() {
-        _domainTools = new Dictionary<string, EnumTool[]>();
-
-        foreach (var kv in _config.domainTools) {
-            _domainTools[kv.Key] = StringsToEnumToolArray(kv.Value);
-        }
-    }
-
     public override void StartClientSide(ICoreClientAPI api) {
         Mod.Logger.Notification("SmartCursor starting");
         _isSmartToolHeld = false;
@@ -98,8 +71,16 @@ public class SmartCursorModSystem : ModSystem {
 
         LoadConfig(CONFIG_PATH);
         SaveConfig(CONFIG_PATH);
-        parseDomainTools();
-        parseMaterialTools();
+
+        rules.Add(new LiveEntityRule(_config, api));
+        if (_config.extended_rule) {
+            rules.Add(new TorchRule(_config, api));
+            rules.Add(new PitKilnRule(_config, api));
+            rules.Add(new BloomeryRule(_config, api));
+            rules.Add(new CrockRule(_config, api));
+            rules.Add(new ClayFormingRule(_config, api));
+        }
+        rules.Add(new ToolRule(_config, api));
 
         SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE, GlKeys.R,
                                              true, true);
@@ -123,10 +104,11 @@ public class SmartCursorModSystem : ModSystem {
 
         var be = _capi.World.BlockAccessor.GetBlockEntity(bs.Position);
 
-        if (be is BlockEntityPitKiln pk) {
-            int stage = FirePitReflection.GetCurrentBuildStage(pk);
-
-            return $"{blockCode}|stage={stage}|complete={pk.IsComplete}|lit={pk.Lit}";
+        foreach (var rule in rules) {
+            string signature = rule.BuildSignature(bs, block, be);
+            if (signature != null) {
+                return signature;
+            }
         }
 
         if (be is BlockEntityGroundStorage gs) {
@@ -136,13 +118,6 @@ public class SmartCursorModSystem : ModSystem {
                 hc.Add(slot.Empty ? 0 : slot.Itemstack.Collectible.Code.GetHashCode());
             }
             return hc.ToHashCode().ToString();
-        }
-        if (be is BlockEntityBloomery bloomery) {
-            var (fuelSlot, oreSlot, outSlot) = BloomeryReflection.GetSlots(bloomery);
-            int oreCapacity = BloomeryReflection.GetOreCapacity(bloomery);
-            bool oreFull = oreSlot.StackSize >= oreCapacity;
-
-            return $"{blockCode}|oreFull={oreFull}|canIgnite={bloomery.CanIgnite()}|burning={bloomery.IsBurning}|hasOut={outSlot.StackSize > 0}";
         }
 
         return blockCode;
@@ -247,7 +222,7 @@ public class SmartCursorModSystem : ModSystem {
     }
 
     bool isItemBlackListed(ItemSlot item) {
-        // "Tin bronze pickaxe"
+        // ex: "Tin bronze pickaxe" since it's needed fot the quest
         return _config.itemBlackList.Contains(item.GetStackName());
     }
 
@@ -286,57 +261,18 @@ public class SmartCursorModSystem : ModSystem {
         return SwapItemSlotSaved(inventoryName, slotNumber);
     }
 
-    private void AddEntityMatcher(List<ItemMatcher> matchers) {
-        EntitySelection es = _capi.World.Player.CurrentEntitySelection;
-
-        if (es != null) {
-            Entity entity = es.Entity;
-            // _capi.ShowChatMessage($"Entity {entity.GetName()} {!entity.Alive}");
-            if (!entity.Alive) {
-                matchers.Add(new ToolTypeMatcher(EnumTool.Knife));
-            }
-        }
-    }
-
-    // This function return tool based on targeted block
-    private void AddToolTypeMatcher(List<ItemMatcher> matchers) {
-        BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
-
-        Block block = _capi.World.BlockAccessor.GetBlock(bs.Position);
-        if (block == null)
-            return;
-
-        string prefix = block.Code?.Path is string p ? (p.IndexOf('-') is int i && i >= 0 ? p[..i] : p) : null;
-
-        EnumTool[] tools;
-        if (_domainTools.TryGetValue(prefix, out tools)) {
-        } else if (_materialTools.TryGetValue(block.BlockMaterial, out tools)) {
-        }
-        if (tools != null) {
-            foreach (var tool in tools) {
-                matchers.Add(new ToolTypeMatcher(tool));
-            }
-        }
-
-        return;
-    }
-
     private List<ItemMatcher> BuildMatcherList() {
         List<ItemMatcher> matchers = new List<ItemMatcher>();
 
-        AddEntityMatcher(matchers);
-
         BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
 
-        if (bs != null) {
-            var slot = OpenStorageSelector.GetTargetedStorageItem(_capi);
-            if (slot != null) {
-                BlockCrockMatcher.Add(matchers, slot, _capi);
-            }
-            FirePitMatcher.Add(matchers, _capi);
-            BloomeryMatcher.Add(matchers, _capi);
-            WorkedItemMatcher.Add(matchers, _capi);
-            AddToolTypeMatcher(matchers);
+        Block block = bs != null ? _capi.World.BlockAccessor.GetBlock(bs.Position) : null;
+        BlockEntity be = bs != null ? _capi.World.BlockAccessor.GetBlockEntity(bs.Position) : null;
+        var slot = OpenStorageSelector.GetTargetedStorageItem(_capi);
+        ItemStack stack = slot?.Itemstack;
+
+        foreach (var rule in rules) {
+            rule.Run(matchers, bs, block, be, stack);
         }
 
         return matchers;
@@ -382,9 +318,9 @@ public class SmartCursorModSystem : ModSystem {
             _capi.World.HighlightBlocks(_capi.World.Player, 123, new List<BlockPos> { pos });
         }
     }
-    //void DumpItem(ItemStack stack) {
-    //    if (stack == null)
-    //        return;
+    // void DumpItem(ItemStack stack) {
+    //     if (stack == null)
+    //         return;
 
     //    var collectible = stack.Collectible;
 
@@ -395,12 +331,12 @@ public class SmartCursorModSystem : ModSystem {
     //    _capi.Logger.Notification($"Stack Attributes: {stack.Attributes?.ToJsonToken()}");
     //}
 
-    //void ShowHeldItemCode() {
-    //    var slot = _capi.World.Player.Entity.RightHandItemSlot;
-    //    if (slot?.Itemstack == null) {
-    //        _capi.ShowChatMessage("[SmartCursor] Hand is empty");
-    //        return;
-    //    }
+    // void ShowHeldItemCode() {
+    //     var slot = _capi.World.Player.Entity.RightHandItemSlot;
+    //     if (slot?.Itemstack == null) {
+    //         _capi.ShowChatMessage("[SmartCursor] Hand is empty");
+    //         return;
+    //     }
 
     //    _capi.Logger.Notification($"[SmartCursor] Held: {slot.Itemstack.Collectible.Code}");
     //    _capi.ShowChatMessage($"[SmartCursor] PATH: {slot.Itemstack.Collectible.Code.Path}");

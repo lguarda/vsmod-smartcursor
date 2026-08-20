@@ -1,16 +1,23 @@
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
-
-using System.Linq;
-using Vintagestory.GameContent;
 using System.Collections.Generic;
+using Vintagestory.GameContent;
+using System.Linq;
 
 namespace SmartCursor {
+public class PitKilnRule : AbstractRule {
+    public PitKilnRule(SmartCursorConfig config, ICoreClientAPI api) : base(config, api) {}
 
-public class FirePitMatcher {
+    public override string BuildSignature(BlockSelection sel, Block block, BlockEntity be) {
+        if (be is BlockEntityPitKiln pk) {
+            int stage = PitKilnReflection.GetCurrentBuildStage(pk);
+            return $"pitkiln|{stage}|{pk.IsComplete}|{pk.Lit}";
+        }
+        return null;
+    }
 
-    private static BuildStageMaterial[] GetActiveMaterialsForStage(BlockEntityPitKiln pk, ICoreClientAPI capi) {
+    private BuildStageMaterial[] GetActiveMaterialsForStage(BlockEntityPitKiln pk) {
         var stageMaterials = pk.NextBuildStage.Materials;
 
         int stage = (int)typeof(BlockEntityPitKiln)
@@ -30,7 +37,7 @@ public class FirePitMatcher {
                 continue;
 
             var match = stageMaterials.FirstOrDefault(
-                m => m.ItemStack.Equals(capi.World, slot.Itemstack, GlobalConstants.IgnoredStackAttributes));
+                m => m.ItemStack.Equals(_capi.World, slot.Itemstack, GlobalConstants.IgnoredStackAttributes));
 
             if (match != null) {
                 // already committed to this material for the current layer
@@ -42,13 +49,10 @@ public class FirePitMatcher {
         return stageMaterials;
     }
 
-    public static void Add(List<ItemMatcher> matchers, ICoreClientAPI capi) {
-        BlockSelection sel = capi.World.Player.CurrentBlockSelection;
-        var be = capi.World.BlockAccessor.GetBlockEntity(sel.Position);
-
+    public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be, ItemStack item) {
         if (be is BlockEntityPitKiln pk) {
             if (!pk.IsComplete) {
-                matchers.Add(new BuildStageMaterialMatcher(FirePitMatcher.GetActiveMaterialsForStage(pk, capi)));
+                matchers.Add(new BuildStageMaterialMatcher(GetActiveMaterialsForStage(pk)));
             } else if (!pk.Lit) {
                 matchers.Add(new ItemCodeMatcher("torch-basic-lit-up"));
             }
@@ -66,7 +70,7 @@ public class FirePitMatcher {
     }
 }
 
-public static class FirePitReflection {
+public static class PitKilnReflection {
     private static readonly System.Reflection.FieldInfo currentBuildStage =
         typeof(BlockEntityPitKiln)
             .GetField("currentBuildStage",

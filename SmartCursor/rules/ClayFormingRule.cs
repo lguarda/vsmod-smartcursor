@@ -8,10 +8,11 @@ using Vintagestory.GameContent;
 using System.Collections.Generic;
 
 namespace SmartCursor {
-public class WorkedItemMatcher {
+public class ClayFormingRule : AbstractRule {
+    public ClayFormingRule(SmartCursorConfig config, ICoreClientAPI api) : base(config, api) {}
 
-    private static string GetWorkItem(BlockPos pos, ICoreClientAPI capi) {
-        BlockEntity be = capi.World.BlockAccessor.GetBlockEntity(pos);
+    private string GetWorkItem(BlockPos pos) {
+        BlockEntity be = _capi.World.BlockAccessor.GetBlockEntity(pos);
         if (be != null) {
             var workItemField = be.GetType().GetField("workItemStack", System.Reflection.BindingFlags.NonPublic |
                                                                            System.Reflection.BindingFlags.Instance);
@@ -28,7 +29,7 @@ public class WorkedItemMatcher {
     }
 
     // This is huge bull shilt
-    private static string SelectItemFromWorkItem(string workItem) {
+    private string SelectItemFromWorkItem(string workItem) {
         switch (workItem) {
         case "clayworkitem-fire":
             return "clay-fire";
@@ -41,12 +42,13 @@ public class WorkedItemMatcher {
         }
     }
 
-    public static void Add(List<ItemMatcher> matchers, ICoreClientAPI capi) {
-        BlockSelection bs = capi.World.Player.CurrentBlockSelection;
-
-        string workItem = WorkedItemMatcher.GetWorkItem(bs.Position, capi);
+    public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be, ItemStack item) {
+        if (sel == null) {
+            return ;
+        }
+        string workItem = GetWorkItem(sel.Position);
         if (workItem != null) {
-            string itemName = WorkedItemMatcher.SelectItemFromWorkItem(workItem);
+            string itemName = SelectItemFromWorkItem(workItem);
             if (itemName != null) {
                 matchers.Add(new ItemCodeMatcher(itemName));
             }

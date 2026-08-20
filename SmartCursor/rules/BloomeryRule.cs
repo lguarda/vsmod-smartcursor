@@ -1,16 +1,26 @@
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
-
-using System.Linq;
-using Vintagestory.GameContent;
 using System.Collections.Generic;
+using Vintagestory.GameContent;
+using System.Linq;
 
 namespace SmartCursor {
-public class BloomeryMatcher {
-    public static void Add(List<ItemMatcher> matchers, ICoreClientAPI capi) {
-        BlockSelection sel = capi.World.Player.CurrentBlockSelection;
-        var be = capi.World.BlockAccessor.GetBlockEntity(sel.Position);
+public class BloomeryRule : AbstractRule {
+    public BloomeryRule(SmartCursorConfig config, ICoreClientAPI api) : base(config, api) {}
+
+    public override string BuildSignature(BlockSelection sel, Block block, BlockEntity be) {
+        if (be is BlockEntityBloomery bloomery) {
+            var (fuelSlot, oreSlot, outSlot) = BloomeryReflection.GetSlots(bloomery);
+            int oreCapacity = BloomeryReflection.GetOreCapacity(bloomery);
+            bool oreFull = oreSlot.StackSize >= oreCapacity;
+
+            return $"bloomery|{oreFull}|{bloomery.CanIgnite()}{bloomery.IsBurning}{outSlot.StackSize > 0}";
+        }
+        return null;
+    }
+
+    public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be, ItemStack item) {
         if (be is not BlockEntityBloomery bloomery)
             return;
 
@@ -29,29 +39,25 @@ public class BloomeryMatcher {
         int oreCapacity = BloomeryReflection.GetOreCapacity(bloomery);
         bool containsOre = !oreSlot.Empty;
 
-        if (oreSlot.StackSize >= oreCapacity)
-        {
+        if (oreSlot.StackSize >= oreCapacity) {
             // When the bloomery is full of ore, match any sufficient fuel
-            matchers.Add(new CombustibleThresholdMatcher(capi, (combustibleProps, content) =>
-                combustibleProps.BurnTemperature >= 1200 &&
-                combustibleProps.BurnDuration > 30 // avoid weird stuff
-            ));
-        }
-        else if (containsOre) {
+            matchers.Add(new CombustibleThresholdMatcher(
+                _capi, (combustibleProps, content) => combustibleProps.BurnTemperature >= 1200 &&
+                                                      combustibleProps.BurnDuration > 30 // avoid weird stuff
+                ));
+        } else if (containsOre) {
             // Return same ore if already present
             string existingOreCode = oreSlot.Itemstack.Item.Code.Path;
             matchers.Add(new ItemCodeMatcher(existingOreCode));
-        }
-        else
-        {
+        } else {
             // Ore match smeltable ore items within temperature limits
-            matchers.Add(new CombustibleThresholdMatcher(capi, (combustibleProps, content) =>
-                combustibleProps.SmeltedStack != null &&
-                combustibleProps.MeltingPoint >= BlockEntityBloomery.MinTemp &&
-                combustibleProps.MeltingPoint < BlockEntityBloomery.MaxTemp
-            ));
+            matchers.Add(new CombustibleThresholdMatcher(
+                _capi, (combustibleProps, content) => combustibleProps.SmeltedStack != null &&
+                                                      combustibleProps.MeltingPoint >= BlockEntityBloomery.MinTemp &&
+                                                      combustibleProps.MeltingPoint < BlockEntityBloomery.MaxTemp));
         }
     }
+
 }
 
 public class CombustibleThresholdMatcher : ItemMatcher {
@@ -92,6 +98,8 @@ public static class BloomeryReflection {
         return (inv[0], inv[1], inv[2]);
     }
 
-    public static int GetOreCapacity(BlockEntityBloomery bloomery) { return (int)OreCapacityProp.GetValue(bloomery); }
+    public static int GetOreCapacity(BlockEntityBloomery bloomery) {
+        return (int)OreCapacityProp.GetValue(bloomery);
+    }
 }
 }
