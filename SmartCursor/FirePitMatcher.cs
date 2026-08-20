@@ -42,7 +42,7 @@ public class FirePitMatcher {
         return stageMaterials;
     }
 
-    public static void GetFirePitMatcher(List<ItemMatcher> matchers, ICoreClientAPI capi) {
+    public static void Add(List<ItemMatcher> matchers, ICoreClientAPI capi) {
         BlockSelection sel = capi.World.Player.CurrentBlockSelection;
         var be = capi.World.BlockAccessor.GetBlockEntity(sel.Position);
 
@@ -53,6 +53,14 @@ public class FirePitMatcher {
                 matchers.Add(new ItemCodeMatcher("torch-basic-lit-up"));
             }
         } else if (be is BlockEntityGroundStorage gs) {
+            foreach (var slot in gs.Inventory) {
+                if (slot?.Itemstack?.Collectible?.Code?.Path != null) {
+                    // TODO may be it's not enough
+                    if (!(slot?.Itemstack?.Collectible?.Code?.Path?.EndsWith("-raw") ?? false)) {
+                        return;
+                    }
+                }
+            }
             matchers.Add(new ItemCodeMatcher("drygrass"));
         }
     }

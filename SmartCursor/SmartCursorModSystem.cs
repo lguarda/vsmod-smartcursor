@@ -130,11 +130,12 @@ public class SmartCursorModSystem : ModSystem {
         }
 
         if (be is BlockEntityGroundStorage gs) {
-            // change whenever slot contents change (e.g. clay appears/disappears)
-            int hash = 17;
-            foreach (var slot in gs.Inventory)
-                hash = hash * 31 + (slot.Empty ? 0 : slot.Itemstack.Collectible.Code.GetHashCode());
-            return $"{blockCode}|gs={hash}";
+            var hc = new HashCode();
+            foreach (var slot in gs.Inventory) {
+                // Add each slot in order
+                hc.Add(slot.Empty ? 0 : slot.Itemstack.Collectible.Code.GetHashCode());
+            }
+            return hc.ToHashCode().ToString();
         }
         if (be is BlockEntityBloomery bloomery) {
             var (fuelSlot, oreSlot, outSlot) = BloomeryReflection.GetSlots(bloomery);
@@ -345,7 +346,8 @@ public class SmartCursorModSystem : ModSystem {
         BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
 
         Block block = _capi.World.BlockAccessor.GetBlock(bs.Position);
-        if (block == null) return;
+        if (block == null)
+            return;
 
         string prefix = block.Code?.Path is string p ? (p.IndexOf('-') is int i && i >= 0 ? p[..i] : p) : null;
 
@@ -370,8 +372,12 @@ public class SmartCursorModSystem : ModSystem {
         BlockSelection bs = _capi.World.Player.CurrentBlockSelection;
 
         if (bs != null) {
-            FirePitMatcher.GetFirePitMatcher(matchers, _capi);
-            BloomeryMatcher.GetBloomeryMatcher(matchers, _capi);
+            var slot = OpenStorageSelector.GetTargetedStorageItem(_capi);
+            if (slot != null) {
+                BlockCrockMatcher.Add(matchers, slot, _capi);
+            }
+            FirePitMatcher.Add(matchers, _capi);
+            BloomeryMatcher.Add(matchers, _capi);
             AddWorkedItemMatcher(matchers);
             AddToolTypeMatcher(matchers);
         }
@@ -419,17 +425,31 @@ public class SmartCursorModSystem : ModSystem {
             _capi.World.HighlightBlocks(_capi.World.Player, 123, new List<BlockPos> { pos });
         }
     }
+    //void DumpItem(ItemStack stack) {
+    //    if (stack == null)
+    //        return;
 
-    // void ShowHeldItemCode()
-    //{
-    //     var slot = _capi.World.Player.Entity.RightHandItemSlot;
-    //     if (slot?.Itemstack == null) {
-    //         _capi.ShowChatMessage("[SmartCursor] Hand is empty");
-    //         return;
-    //     }
-    //     _capi.Logger.Notification($"[SmartCursor] Held: {slot.Itemstack.Collectible.Code.Path}");
-    //     _capi.ShowChatMessage($"[SmartCursor] Held: {slot.Itemstack.Collectible.Code.Path}");
-    // }
+    //    var collectible = stack.Collectible;
+
+    //    _capi.Logger.Notification($"=== ITEM ===");
+    //    _capi.Logger.Notification($"Code: {collectible.Code}");
+    //    _capi.Logger.Notification($"Class: {collectible.GetType().FullName}");
+    //    _capi.Logger.Notification($"Attributes: {collectible.Attributes?.Token}");
+    //    _capi.Logger.Notification($"Stack Attributes: {stack.Attributes?.ToJsonToken()}");
+    //}
+
+    //void ShowHeldItemCode() {
+    //    var slot = _capi.World.Player.Entity.RightHandItemSlot;
+    //    if (slot?.Itemstack == null) {
+    //        _capi.ShowChatMessage("[SmartCursor] Hand is empty");
+    //        return;
+    //    }
+
+    //    _capi.Logger.Notification($"[SmartCursor] Held: {slot.Itemstack.Collectible.Code}");
+    //    _capi.ShowChatMessage($"[SmartCursor] PATH: {slot.Itemstack.Collectible.Code.Path}");
+    //    _capi.ShowChatMessage($"[SmartCursor] CODE: {slot.Itemstack.Collectible.Code}");
+    //    DumpItem(slot?.Itemstack);
+    //}
 
     private void StartSmartCursor(bool mode) {
         // ShowHeldItemCode();

@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace SmartCursor {
 public class BloomeryMatcher {
-    public static void GetBloomeryMatcher(List<ItemMatcher> matchers, ICoreClientAPI capi) {
+    public static void Add(List<ItemMatcher> matchers, ICoreClientAPI capi) {
         BlockSelection sel = capi.World.Player.CurrentBlockSelection;
         var be = capi.World.BlockAccessor.GetBlockEntity(sel.Position);
         if (be is not BlockEntityBloomery bloomery)

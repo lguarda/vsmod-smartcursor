@@ -31,6 +31,16 @@ public class ItemCodeMatcher : ItemMatcher {
     public override bool Matches(ItemSlot slot) { return slot?.Itemstack?.Collectible?.Code?.Path == itemCode; }
 }
 
+public class ItemPathPartialMatcher : ItemMatcher {
+    private readonly string itemPath;
+
+    public ItemPathPartialMatcher(string itemPath) { this.itemPath = itemPath; }
+
+    public override bool Matches(ItemSlot slot) {
+        return slot?.Itemstack?.Collectible?.Code?.Path?.StartsWith(itemPath) ?? false;
+    }
+}
+
 public class BuildStageMaterialMatcher : ItemMatcher {
     private readonly BuildStageMaterial[] materials;
 
