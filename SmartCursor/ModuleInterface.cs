@@ -1,24 +1,39 @@
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using System.Collections.Generic;
+using System;
 
 namespace SmartCursor {
 public class ModStateManager {
-    // High-level state flags to prevent module conflicts
+    public const string CONFIG_PATH = "smartcursor.json";
+    public SmartCursorConfig config;
+    ICoreClientAPI _capi;
+
+    public ModStateManager(ICoreClientAPI capi) {
+        _capi = capi;
+        LoadConfig(); //  error CS0103: The name 'Loadconfig' does not exist in the current context
+    }
+
+    public void SaveConfig() {
+        _capi.StoreModConfig(config, CONFIG_PATH);
+    }
+
+    private void LoadConfig() {
+        try {
+            config = _capi.LoadModConfig<SmartCursorConfig>(CONFIG_PATH);
+        } catch (Exception) {
+            config = null;
+        }
+        if (config == null) {
+            config = new SmartCursorConfig();
+        }
+    }
+
     public bool Lock { get; set; }
-
-    // Lightweight event system so modules can talk without referencing each other directly
-    // public event Action<string> OnModuleStateChanged;
-
-    // public void NotifyStateChange(string reason)
-    //{
-    //     OnModuleStateChanged?.Invoke(reason);
-    // }
 }
 
 public interface IModModule {
     void Initialize(ICoreClientAPI capi, ModStateManager stateManager);
-    // void Dispose();
 }
 
 public class GlobalSystem : ModSystem {
@@ -30,27 +45,18 @@ public class GlobalSystem : ModSystem {
 
     public override void StartClientSide(ICoreClientAPI api) {
         _capi = api;
-        _stateManager = new ModStateManager();
+        _capi.Logger.Notification("SmartCursor starting");
 
-        // Instantiate and initialize modules
+        _stateManager = new ModStateManager(_capi);
+
         RegisterModule(new SmartCursorModule());
         RegisterModule(new TransferAwayModule());
-        // RegisterModule(new QuickSwapModule());
+        RegisterModule(new RefillModule());
     }
 
     private void RegisterModule(IModModule module) {
         module.Initialize(_capi, _stateManager);
         _modules.Add(module);
     }
-
-    // public override void Dispose()
-    //{
-    //     foreach (var module in _modules)
-    //     {
-    //         module.Dispose();
-    //     }
-    //     _modules.Clear();
-    //     base.Dispose();
-    // }
 }
 }

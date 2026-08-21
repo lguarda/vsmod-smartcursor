@@ -13,66 +13,7 @@ using System.Linq;
 
 namespace SmartCursor {
 
-///
-public static class UseFlag {
-    public static ICoreClientAPI Capi;
-    public static bool SelfActionInProgress; // true only while OUR bag-put or pump code runs
-}
-///
-
 public class SmartCursorModule : IModModule {
-    ///
-    ///
-
-    void OnHotbarSlotModified(int slotId) {
-        // Ignore in creative
-        if (UseFlag.Capi.World.Player.WorldData.CurrentGameMode == EnumGameMode.Creative)
-            return;
-
-        if (UseFlag.SelfActionInProgress)
-            return;
-        //_capi.ShowChatMessage($"OMG 2");
-
-        var invMgr = UseFlag.Capi.World.Player.InventoryManager;
-        var activeIndex = invMgr.ActiveHotbarSlotNumber;
-        if (slotId != activeIndex)
-            return;
-        //_capi.ShowChatMessage($"OMG 3");
-
-        UseFlag.Capi.Event.EnqueueMainThreadTask(() => {
-            // Ignore if player is mid mouse-drag (grabbed item sitting on cursor)
-            if (invMgr.MouseItemSlot != null && !invMgr.MouseItemSlot.Empty)
-                return;
-            //_capi.ShowChatMessage($"OMG 4");
-
-            var slot = invMgr.GetHotbarInventory()[slotId];
-            bool empty = slot.Itemstack == null || slot.StackSize == 0;
-            if (empty)
-                RunPumpLogic(slotId);
-        }, "smartcursor-slotcheck");
-    }
-
-    void RunPumpLogic(int slotIndex) {
-        _capi.ShowChatMessage($"OMG 6");
-        UseFlag.SelfActionInProgress = true;
-        try {
-            // scan inventory, TryPutInto the matching stack into hotbar[slotIndex]
-        } finally {
-            UseFlag.SelfActionInProgress = false;
-        }
-    }
-
-    void RunBagPutLogic(/* your hotkey handler args */) {
-        UseFlag.SelfActionInProgress = true;
-        try {
-            // your bag-put transfer here
-        } finally {
-            UseFlag.SelfActionInProgress = false;
-        }
-    }
-    ///
-
-    const string CONFIG_PATH = "smartcursor.json";
 
     ICoreClientAPI _capi;
     int _savedSlotIndex;
@@ -81,12 +22,12 @@ public class SmartCursorModule : IModModule {
     bool _isSmartToolHeld;
     bool _isToggleMode;
     long _listener = -1;
+    private ModStateManager _state;
+    private SlotHandler _sh;
 
     List<AbstractRule> rules = new List<AbstractRule>();
 
     string _previousBlockCode;
-
-    SmartCursorConfig _config;
 
     private void HotKeyListener(string hotkeycode, KeyCombination keyComb) {
         switch (hotkeycode) {
@@ -97,7 +38,7 @@ public class SmartCursorModule : IModModule {
             StartSmartCursor(true);
             break;
         case SmartCursorKeybind.HOTKEY_SMARTCURSOR_ONE_SHOT:
-            PushTool();
+            PushTool2();
             break;
         case SmartCursorKeybind.HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE:
             BlackListItem();
@@ -105,46 +46,21 @@ public class SmartCursorModule : IModModule {
         }
     }
 
-    private void SaveConfig(string path) { _capi.StoreModConfig(_config, path); }
-
-    private void LoadConfig(string path) {
-        try {
-            _config = _capi.LoadModConfig<SmartCursorConfig>(path);
-        } catch (Exception) {
-            _config = null;
-        }
-        if (_config == null) {
-            _config = new SmartCursorConfig();
-        }
-    }
-
-    void OnPlayerSpawn(IClientPlayer byPlayer) {
-        byPlayer.InventoryManager.GetHotbarInventory().SlotModified += OnHotbarSlotModified;
-    }
-
     public void Initialize(ICoreClientAPI capi, ModStateManager stateManager) {
-
-        var harmony = new Harmony("wholtpo");
-        harmony.PatchAll();
-        UseFlag.Capi = capi;
-        capi.Event.PlayerEntitySpawn += OnPlayerSpawn;
-
-        capi.Logger.Notification("SmartCursor starting");
         _isSmartToolHeld = false;
+        _state = stateManager;
         _capi = capi;
+        _sh = new SlotHandler(capi, stateManager);
 
-        LoadConfig(CONFIG_PATH);
-        SaveConfig(CONFIG_PATH);
-
-        rules.Add(new LiveEntityRule(_config, capi));
-        if (_config.extended_rule) {
-            rules.Add(new TorchRule(_config, capi));
-            rules.Add(new PitKilnRule(_config, capi));
-            rules.Add(new BloomeryRule(_config, capi));
-            rules.Add(new CrockRule(_config, capi));
-            rules.Add(new ClayFormingRule(_config, capi));
+        rules.Add(new LiveEntityRule(_state.config, capi));
+        if (_state.config.extended_rule) {
+            rules.Add(new TorchRule(_state.config, capi));
+            rules.Add(new PitKilnRule(_state.config, capi));
+            rules.Add(new BloomeryRule(_state.config, capi));
+            rules.Add(new CrockRule(_state.config, capi));
+            rules.Add(new ClayFormingRule(_state.config, capi));
         }
-        rules.Add(new ToolRule(_config, capi));
+        rules.Add(new ToolRule(_state.config, capi));
 
         SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE, GlKeys.R,
                                              null, true, true);
@@ -209,7 +125,7 @@ public class SmartCursorModule : IModModule {
         List<ItemMatcher> matchers = BuildMatcherList();
         if (matchers.Count > 0 && !IsRightItem2(currentSlot, matchers)) {
             PopTool(); // no-op if handDepleted branch already popped
-            _isSmartToolHeld = PushTool();
+            _isSmartToolHeld = PushTool2();
             return true;
         }
 
@@ -226,7 +142,7 @@ public class SmartCursorModule : IModModule {
             }
 
             // When continuousMode enabled and reload was done stop here
-            if (_config.continuousMode && SmartToolReload()) {
+            if (_state.config.continuousMode && SmartToolReload()) {
                 return;
             }
         }
@@ -287,21 +203,21 @@ public class SmartCursorModule : IModModule {
 
     bool isItemBlackListed(ItemSlot item) {
         // ex: "Tin bronze pickaxe" since it's needed fot the quest
-        return _config.itemBlackList.Contains(item.GetStackName());
+        return _state.config.itemBlackList.Contains(item.GetStackName());
     }
 
     private void BlackListItem() {
         ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
         if (!currentSlot.Empty) {
             string name = currentSlot.GetStackName();
-            if (_config.itemBlackList.Contains(name)) {
-                _config.itemBlackList.Remove(name);
+            if (_state.config.itemBlackList.Contains(name)) {
+                _state.config.itemBlackList.Remove(name);
                 _capi.ShowChatMessage($"Removed from blacklist: {name}");
             } else {
-                _config.itemBlackList.Add(name);
+                _state.config.itemBlackList.Add(name);
                 _capi.ShowChatMessage($"Added to Blacklist: {name}");
             }
-            SaveConfig(CONFIG_PATH);
+            _state.SaveConfig();
         }
     }
 
@@ -342,6 +258,11 @@ public class SmartCursorModule : IModModule {
         return matchers;
     }
 
+    private bool PushTool2() {
+        List<ItemMatcher> matchers = BuildMatcherList();
+        return _sh.PushItem(matchers, _state.config.itemBlackList, _sh.FlipTransfer);
+    }
+
     private bool PushTool() {
         ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
         List<ItemMatcher> matchers = BuildMatcherList();
@@ -355,8 +276,8 @@ public class SmartCursorModule : IModModule {
             }
 
             // Search on each inventory configured in inventories order matter
-            for (int j = 0; j < _config.inventories.Length; j++) {
-                if (SwapItemName(_config.inventories[j], matcher)) {
+            for (int j = 0; j < _state.config.inventories.Length; j++) {
+                if (SwapItemName(_state.config.inventories[j], matcher)) {
                     return true;
                 }
             }
@@ -373,7 +294,8 @@ public class SmartCursorModule : IModModule {
     private void PopTool() {
         if (_isSmartToolHeld) {
             _isSmartToolHeld = false;
-            SwapItemSlot();
+            //SwapItemSlot();
+            _sh.TransferSavedSlot(_sh.FlipTransfer);
         }
     }
 
@@ -414,7 +336,8 @@ public class SmartCursorModule : IModModule {
         if (!_isSmartToolHeld) {
             UnregisterSmartToolStopListListener();
             _listener = _capi.Event.RegisterGameTickListener(SmartToolStopListListener, 100);
-            _isSmartToolHeld = PushTool();
+            _capi.ShowChatMessage($"OMG 1");
+            _isSmartToolHeld = PushTool2();
         } else if (_isToggleMode) {
             PopTool();
             UnregisterSmartToolStopListListener();

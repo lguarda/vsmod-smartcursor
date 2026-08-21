@@ -5,16 +5,20 @@ using Vintagestory.API.Config;
 namespace SmartCursor {
 
 public class TransferAwayModule : IModModule {
-    ICoreClientAPI _capi;
+    private ICoreClientAPI _capi;
+    private ModStateManager _state;
 
 
     private bool OnPutInBagHotkeyPressed(KeyCombination keyComb) {
+        _state.Lock = true;
         PutItemInInventory(_capi.World.Player.InventoryManager.ActiveHotbarSlot);
+        _state.Lock = false;
         return true;
     }
 
     public void Initialize(ICoreClientAPI capi, ModStateManager stateManager) {
         _capi = capi;
+        _state = stateManager;
         SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_PUTITINTHEBAG, GlKeys.B,
                                              OnPutInBagHotkeyPressed);
     }
@@ -25,7 +29,7 @@ public class TransferAwayModule : IModModule {
 
         ItemStackMoveOperation op = new ItemStackMoveOperation(
             _capi.World, EnumMouseButton.Left,
-            EnumModifierKey.SHIFT, // Simulates shift-click logic
+            EnumModifierKey.SHIFT,
             EnumMergePriority.AutoMerge, sourceSlot.StackSize) { ActingPlayer = _capi.World.Player };
 
         object[] packets = _capi.World.Player.InventoryManager.TryTransferAway(
