@@ -14,7 +14,7 @@ public class SlotHandler {
 
     int _savedSlotIndex;
     string _savedSlotInventoryName;
-    int _savedActiveSlotIndex;
+    public int _savedActiveSlotIndex;
 
     public SlotHandler(ICoreClientAPI capi, ModStateManager stateManager) {
         _state = stateManager;
@@ -22,20 +22,17 @@ public class SlotHandler {
     }
 
     public bool PushItem(List<ItemMatcher> matchers, HashSet<string> itemBlackList, SlotTransferDelegate transfer) {
-        _capi.ShowChatMessage($"OMG 2");
+        _capi.ShowChatMessage($"PUSH ITEM 1");
         ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
         if (matchers == null || matchers.Count == 0) {
-            _capi.ShowChatMessage($"OMG 3");
             return false;
         }
         foreach (var matcher in matchers) {
             if (matcher.Matches(currentSlot)) {
-                _capi.ShowChatMessage($"OMG 4");
                 return false;
             }
             for (int j = 0; j < _state.config.inventories.Length; j++) {
                 if (TransferMatchedItem(_state.config.inventories[j], matcher, itemBlackList, transfer)) {
-                    _capi.ShowChatMessage($"OMG 5");
                     return true;
                 }
             }

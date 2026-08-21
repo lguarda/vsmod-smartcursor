@@ -16,9 +16,6 @@ namespace SmartCursor {
 public class SmartCursorModule : IModModule {
 
     ICoreClientAPI _capi;
-    int _savedSlotIndex;
-    string _savedSlotInventoryName;
-    int _savedActiveSlotIndex;
     bool _isSmartToolHeld;
     bool _isToggleMode;
     long _listener = -1;
@@ -153,28 +150,20 @@ public class SmartCursorModule : IModModule {
         if (!mouseItemSlot.Empty) {
             PopTool();
             UnregisterSmartToolStopListListener();
+            _capi.ShowChatMessage($"OMG 5");
             return;
         }
 
         // To avoid confusion when active bar change disable the smart tool
         int currentActiveSlotIndex = _capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
-        if (currentActiveSlotIndex != _savedActiveSlotIndex) {
+        if (currentActiveSlotIndex != _sh._savedActiveSlotIndex) {
             PopTool();
             UnregisterSmartToolStopListListener();
+            _capi.ShowChatMessage($"OMG 6");
             return;
         }
     }
 
-    private bool SwapItemSlot() {
-        IInventory hotbar = _capi.World.Player.InventoryManager.GetOwnInventory(GlobalConstants.hotBarInvClassName);
-        IInventory inventory = _capi.World.Player.InventoryManager.GetOwnInventory(_savedSlotInventoryName);
-        object obj = hotbar.TryFlipItems(_savedActiveSlotIndex, inventory[_savedSlotIndex]);
-        if (obj != null) {
-            _capi.Network.SendPacketClient(obj);
-        }
-
-        return true;
-    }
 
     private bool IsRightItem(ItemSlot slot, ItemMatcher matcher) {
         return !isItemBlackListed(slot) && matcher.Matches(slot);
@@ -187,18 +176,6 @@ public class SmartCursorModule : IModModule {
             }
         }
         return false;
-    }
-
-    private bool SwapItemSlotSaved(string inventoryName, int slotNumber) {
-        if (slotNumber < 0) {
-            return false;
-        }
-
-        _savedSlotIndex = slotNumber;
-        _savedSlotInventoryName = inventoryName;
-        _savedActiveSlotIndex = _capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
-
-        return SwapItemSlot();
     }
 
     bool isItemBlackListed(ItemSlot item) {
@@ -230,17 +207,6 @@ public class SmartCursorModule : IModModule {
         return -1;
     }
 
-    private bool SwapItemName(string inventoryName, ItemMatcher matcher) {
-        IInventory inventory = _capi.World.Player.InventoryManager.GetOwnInventory(inventoryName);
-        if (inventory == null) {
-            return false;
-        }
-
-        int slotNumber = FindToolSlotInInventory(matcher, inventory);
-
-        return SwapItemSlotSaved(inventoryName, slotNumber);
-    }
-
     private List<ItemMatcher> BuildMatcherList() {
         List<ItemMatcher> matchers = new List<ItemMatcher>();
 
@@ -263,28 +229,6 @@ public class SmartCursorModule : IModModule {
         return _sh.PushItem(matchers, _state.config.itemBlackList, _sh.FlipTransfer);
     }
 
-    private bool PushTool() {
-        ItemSlot currentSlot = _capi.World.Player.InventoryManager.ActiveHotbarSlot;
-        List<ItemMatcher> matchers = BuildMatcherList();
-        if (matchers == null || matchers.Count == 0) {
-            return false;
-        }
-
-        foreach (var matcher in matchers) {
-            if (matcher.Matches(currentSlot)) {
-                return false;
-            }
-
-            // Search on each inventory configured in inventories order matter
-            for (int j = 0; j < _state.config.inventories.Length; j++) {
-                if (SwapItemName(_state.config.inventories[j], matcher)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     private void UnregisterSmartToolStopListListener() {
         if (_listener >= 0) {
             _capi.Event.UnregisterGameTickListener(_listener);
@@ -294,7 +238,6 @@ public class SmartCursorModule : IModModule {
     private void PopTool() {
         if (_isSmartToolHeld) {
             _isSmartToolHeld = false;
-            //SwapItemSlot();
             _sh.TransferSavedSlot(_sh.FlipTransfer);
         }
     }
