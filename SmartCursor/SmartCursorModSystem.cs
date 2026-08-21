@@ -5,18 +5,74 @@ using Vintagestory.API.Common.Entities;
 using Vintagestory.GameContent;
 using System;
 using System.Collections.Generic;
-
 using Vintagestory.API.MathTools;
+///
+using HarmonyLib;
+using System.Linq;
+///
 
 namespace SmartCursor {
 
-public class SmartCursorModSystem : ModSystem {
+///
+public static class UseFlag {
+    public static ICoreClientAPI Capi;
+    public static bool SelfActionInProgress; // true only while OUR bag-put or pump code runs
+}
+///
+
+public class SmartCursorModule : IModModule {
+    ///
+    ///
+
+    void OnHotbarSlotModified(int slotId) {
+        // Ignore in creative
+        if (UseFlag.Capi.World.Player.WorldData.CurrentGameMode == EnumGameMode.Creative)
+            return;
+
+        if (UseFlag.SelfActionInProgress)
+            return;
+        //_capi.ShowChatMessage($"OMG 2");
+
+        var invMgr = UseFlag.Capi.World.Player.InventoryManager;
+        var activeIndex = invMgr.ActiveHotbarSlotNumber;
+        if (slotId != activeIndex)
+            return;
+        //_capi.ShowChatMessage($"OMG 3");
+
+        UseFlag.Capi.Event.EnqueueMainThreadTask(() => {
+            // Ignore if player is mid mouse-drag (grabbed item sitting on cursor)
+            if (invMgr.MouseItemSlot != null && !invMgr.MouseItemSlot.Empty)
+                return;
+            //_capi.ShowChatMessage($"OMG 4");
+
+            var slot = invMgr.GetHotbarInventory()[slotId];
+            bool empty = slot.Itemstack == null || slot.StackSize == 0;
+            if (empty)
+                RunPumpLogic(slotId);
+        }, "smartcursor-slotcheck");
+    }
+
+    void RunPumpLogic(int slotIndex) {
+        _capi.ShowChatMessage($"OMG 6");
+        UseFlag.SelfActionInProgress = true;
+        try {
+            // scan inventory, TryPutInto the matching stack into hotbar[slotIndex]
+        } finally {
+            UseFlag.SelfActionInProgress = false;
+        }
+    }
+
+    void RunBagPutLogic(/* your hotkey handler args */) {
+        UseFlag.SelfActionInProgress = true;
+        try {
+            // your bag-put transfer here
+        } finally {
+            UseFlag.SelfActionInProgress = false;
+        }
+    }
+    ///
 
     const string CONFIG_PATH = "smartcursor.json";
-    const string HOTKEY_SMARTCURSOR = "smartcursor";
-    const string HOTKEY_SMARTCURSOR_TOGGLE = "smartcursor toggle";
-    const string HOTKEY_SMARTCURSOR_ONE_SHOT = "smartcursor one shot";
-    const string HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE = "smartcursor blacklist toggle";
 
     ICoreClientAPI _capi;
     int _savedSlotIndex;
@@ -31,8 +87,6 @@ public class SmartCursorModSystem : ModSystem {
     string _previousBlockCode;
 
     SmartCursorConfig _config;
-    Dictionary<EnumBlockMaterial, EnumTool[]> _materialTools;
-    Dictionary<string, EnumTool[]> _domainTools;
 
     private void HotKeyListener(string hotkeycode, KeyCombination keyComb) {
         switch (hotkeycode) {
@@ -64,28 +118,38 @@ public class SmartCursorModSystem : ModSystem {
         }
     }
 
-    public override void StartClientSide(ICoreClientAPI api) {
-        Mod.Logger.Notification("SmartCursor starting");
+    void OnPlayerSpawn(IClientPlayer byPlayer) {
+        byPlayer.InventoryManager.GetHotbarInventory().SlotModified += OnHotbarSlotModified;
+    }
+
+    public void Initialize(ICoreClientAPI capi, ModStateManager stateManager) {
+
+        var harmony = new Harmony("wholtpo");
+        harmony.PatchAll();
+        UseFlag.Capi = capi;
+        capi.Event.PlayerEntitySpawn += OnPlayerSpawn;
+
+        capi.Logger.Notification("SmartCursor starting");
         _isSmartToolHeld = false;
-        _capi = api;
+        _capi = capi;
 
         LoadConfig(CONFIG_PATH);
         SaveConfig(CONFIG_PATH);
 
-        rules.Add(new LiveEntityRule(_config, api));
+        rules.Add(new LiveEntityRule(_config, capi));
         if (_config.extended_rule) {
-            rules.Add(new TorchRule(_config, api));
-            rules.Add(new PitKilnRule(_config, api));
-            rules.Add(new BloomeryRule(_config, api));
-            rules.Add(new CrockRule(_config, api));
-            rules.Add(new ClayFormingRule(_config, api));
+            rules.Add(new TorchRule(_config, capi));
+            rules.Add(new PitKilnRule(_config, capi));
+            rules.Add(new BloomeryRule(_config, capi));
+            rules.Add(new CrockRule(_config, capi));
+            rules.Add(new ClayFormingRule(_config, capi));
         }
-        rules.Add(new ToolRule(_config, api));
+        rules.Add(new ToolRule(_config, capi));
 
         SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE, GlKeys.R,
-                                             true, true);
+                                             null, true, true);
         SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR, GlKeys.R);
-        SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_TOGGLE, GlKeys.R, true);
+        SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_TOGGLE, GlKeys.R, null, true);
         SmartCursorKeybind.RegisterClientKey(_capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_ONE_SHOT, GlKeys.Unknown);
         _capi.Input.AddHotkeyListener(HotKeyListener);
     }

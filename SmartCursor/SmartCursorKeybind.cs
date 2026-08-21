@@ -16,17 +16,23 @@ public class SmartCursorKeybind {
     public const string HOTKEY_SMARTCURSOR_TOGGLE = "smartcursor toggle";
     public const string HOTKEY_SMARTCURSOR_ONE_SHOT = "smartcursor one shot";
     public const string HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE = "smartcursor blacklist toggle";
-#if WITH_SERVER
-    public const string HOTKEY_SMARTCURSOR_PLACEMENT = "smartcursor block placement";
-#endif
+    // this name if to reference the best mod in vs
+    // https://mods.vintagestory.at/show/mod/31020
+    public const string HOTKEY_SMARTCURSOR_PUTITINTHEBAG = "smartcursor put it in the bag";
 
-    static public void RegisterClientKey(ICoreClientAPI capi, string keyCode, GlKeys key, bool altPressed = false,
+    static public void RegisterClientKey(ICoreClientAPI capi, string keyCode, GlKeys key,
+                                         ActionConsumable<KeyCombination> handler = null, bool altPressed = false,
                                          bool ctrlPressed = false, bool shiftPressed = false) {
         string keybindDisplayName = Lang.Get($"smartcursor:{keyCode}");
 
         capi.Input.RegisterHotKey(keyCode, $"Smart cursor: {keybindDisplayName}", key, HotkeyType.GUIOrOtherControls,
                                   altPressed, ctrlPressed, shiftPressed);
-        capi.Input.SetHotKeyHandler(keyCode, (_) => true);
+
+        if (handler != null) {
+            capi.Input.SetHotKeyHandler(keyCode, handler);
+        } else {
+            capi.Input.SetHotKeyHandler(keyCode, (_) => true);
+        }
     }
 }
 }
