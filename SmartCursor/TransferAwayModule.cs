@@ -10,7 +10,6 @@ namespace SmartCursor
         private ICoreClientAPI capi;
         private ModStateManager state;
 
-
         private bool OnPutInBagHotkeyPressed(KeyCombination keyComb)
         {
             state.Lock = true;
@@ -33,9 +32,8 @@ namespace SmartCursor
                 return false;
 
             ItemStackMoveOperation op = new ItemStackMoveOperation(
-                capi.World, EnumMouseButton.Left,
-                EnumModifierKey.SHIFT,
-                EnumMergePriority.AutoMerge, sourceSlot.StackSize)
+                capi.World, EnumMouseButton.Left, EnumModifierKey.SHIFT, EnumMergePriority.AutoMerge,
+                sourceSlot.StackSize)
             { ActingPlayer = capi.World.Player };
 
             object[] packets = capi.World.Player.InventoryManager.TryTransferAway(

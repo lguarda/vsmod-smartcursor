@@ -1,6 +1,8 @@
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using System.Collections.Generic;
+using System.Linq;
+using Vintagestory.Client.NoObf;
 
 namespace SmartCursor
 {
@@ -14,66 +16,81 @@ namespace SmartCursor
     {
         private ICoreClientAPI capi;
         private ModStateManager state;
+        private SlotHandler sh;
 
         private long lockedAt;
         private const int GRACE_PERIOS_MS = 200;
 
-        void OnHotbarSlotModified(int slotId)
+        private ItemStack[] prevSnapshot = new ItemStack[10];
+        private int prevActiveSlot = -1;
+        private long tickListenerId;
+
+        bool IsInventoryOpen()
         {
-            if (state.Lock)
+            foreach (var dlg in capi.Gui.OpenedGuis)
             {
-                lockedAt = capi.World.ElapsedMilliseconds;
-                return;
+                if (dlg.GetType().Name == "GuiDialogInventory")
+                {
+                    return true;
+                }
             }
+            return false;
+        }
 
-            var elapsed = capi.World.ElapsedMilliseconds - lockedAt;
-            if (elapsed < GRACE_PERIOS_MS) return;
-
-            // Ignore in creative
-            if (capi.World.Player.WorldData.CurrentGameMode == EnumGameMode.Creative)
-                return;
-
+        void OnPollTick(float dt)
+        {
             if (UseFlag.selfActionInProgress)
+                return;
+            if (capi.World?.Player == null)
                 return;
 
             var invMgr = capi.World.Player.InventoryManager;
-            var activeIndex = invMgr.ActiveHotbarSlotNumber;
-            if (slotId != activeIndex)
-                return;
+            bool dragging = invMgr.MouseItemSlot != null && !invMgr.MouseItemSlot.Empty;
 
-            capi.Event.EnqueueMainThreadTask(() =>
+            var hotbar = invMgr.GetHotbarInventory();
+            int active = invMgr.ActiveHotbarSlotNumber;
+            bool activeSlotStable = active == prevActiveSlot;
+
+            for (int i = 0; i < 10; i++)
             {
-                // Ignore if player is mid mouse-drag (grabbed item sitting on cursor)
-                if (invMgr.MouseItemSlot != null && !invMgr.MouseItemSlot.Empty)
-                    return;
+                var slot = hotbar[i];
+                var cur = slot.Itemstack;
+                var prev = prevSnapshot[i];
 
-                var slot = invMgr.GetHotbarInventory()[slotId];
-                bool empty = slot.Itemstack == null || slot.StackSize == 0;
-                if (empty)
-                    RunPumpLogic(slotId);
-            }, "smartcursor-slotcheck");
+                bool wasEmpty = prev == null;
+                bool isEmpty = cur == null || slot.StackSize == 0;
+
+                bool becameEmpty = !wasEmpty && isEmpty;
+                bool eligible = becameEmpty && i == active && activeSlotStable && !dragging && !IsInventoryOpen();
+
+                if (eligible && prev.Collectible.MaxStackSize > 1)
+                {
+
+                    var elapsed = capi.World.ElapsedMilliseconds - lockedAt;
+                    if (state.Lock)
+                    {
+                        lockedAt = capi.World.ElapsedMilliseconds;
+                    }
+                    else if (elapsed > GRACE_PERIOS_MS)
+                    {
+                        RunPumpLogic(i, prev.Collectible);
+                    }
+                }
+
+                // always update, regardless of drag/active state, so tracking stays accurate
+                prevSnapshot[i] = cur;
+            }
+
+            prevActiveSlot = active;
         }
 
-        void RunPumpLogic(int slotIndex)
+        void RunPumpLogic(int slotIndex, CollectibleObject itemToRefill)
         {
-            capi.ShowChatMessage($"OMG 6");
             UseFlag.selfActionInProgress = true;
             try
             {
+                capi.ShowChatMessage($"Last Item was {itemToRefill?.Code?.Path}");
                 // scan inventory, TryPutInto the matching stack into hotbar[slotIndex]
-            }
-            finally
-            {
-                UseFlag.selfActionInProgress = false;
-            }
-        }
-
-        void RunBagPutLogic(/* your hotkey handler args */)
-        {
-            UseFlag.selfActionInProgress = true;
-            try
-            {
-                // your bag-put transfer here
             }
             finally
             {
@@ -83,15 +100,15 @@ namespace SmartCursor
 
         void OnPlayerSpawn(IClientPlayer byPlayer)
         {
-            byPlayer.InventoryManager.GetHotbarInventory().SlotModified += OnHotbarSlotModified;
+            tickListenerId = capi.Event.RegisterGameTickListener(OnPollTick, 100);
         }
 
         public void Initialize(ICoreClientAPI api, ModStateManager stateManager)
         {
-            capi.Event.PlayerEntitySpawn += OnPlayerSpawn;
             capi = api;
             state = stateManager;
+            sh = new SlotHandler(capi, state);
+            capi.Event.PlayerEntitySpawn += OnPlayerSpawn;
         }
-
     }
 }

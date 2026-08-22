@@ -17,10 +17,7 @@ namespace SmartCursor
             LoadConfig(); //  error CS0103: The name 'Loadconfig' does not exist in the current context
         }
 
-        public void SaveConfig()
-        {
-            capi.StoreModConfig(config, CONFIG_PATH);
-        }
+        public void SaveConfig() { capi.StoreModConfig(config, CONFIG_PATH); }
 
         private void LoadConfig()
         {

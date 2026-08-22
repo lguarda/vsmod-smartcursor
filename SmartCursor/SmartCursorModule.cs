@@ -146,12 +146,9 @@ namespace SmartCursor
         {
             if (!isToggleMode)
             {
-                capi.ShowChatMessage($"OMG 2");
-
                 // When not in toggle mode and hotkey was released pop tool
                 if (!capi.Input.IsHotKeyPressed(SmartCursorKeybind.HOTKEY_SMARTCURSOR))
                 {
-                    capi.ShowChatMessage($"OMG 3");
                     PopTool();
                     UnregisterSmartToolStopListListener();
                     return;
@@ -160,7 +157,6 @@ namespace SmartCursor
                 // When continuousMode enabled and reload was done stop here
                 if (state.config.continuousMode && SmartToolReload())
                 {
-                    capi.ShowChatMessage($"OMG 4");
                     return;
                 }
             }
@@ -172,7 +168,6 @@ namespace SmartCursor
             {
                 PopTool();
                 UnregisterSmartToolStopListListener();
-                capi.ShowChatMessage($"OMG 5");
                 return;
             }
 
@@ -182,11 +177,9 @@ namespace SmartCursor
             {
                 PopTool();
                 UnregisterSmartToolStopListListener();
-                capi.ShowChatMessage($"OMG 6");
                 return;
             }
         }
-
 
         private bool IsRightItem2(ItemSlot slot, List<ItemMatcher> matchers)
         {

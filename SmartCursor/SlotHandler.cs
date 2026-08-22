@@ -49,7 +49,8 @@ namespace SmartCursor
             return false;
         }
 
-        private bool TransferMatchedItem(string inventoryName, ItemMatcher matcher, HashSet<string> itemBlackList, SlotTransferDelegate transfer)
+        private bool TransferMatchedItem(string inventoryName, ItemMatcher matcher, HashSet<string> itemBlackList,
+                                         SlotTransferDelegate transfer)
         {
             IInventory inventory = capi.World.Player.InventoryManager.GetOwnInventory(inventoryName);
             if (inventory == null)
@@ -84,9 +85,11 @@ namespace SmartCursor
 
         private int FindMatchingSlotInInventory(ItemMatcher matcher, HashSet<string> itemBlackList, IInventory inventory)
         {
-            for (int i = 0; i < inventory.Count; i++) {
+            for (int i = 0; i < inventory.Count; i++)
+            {
                 ItemSlot slot = inventory[i];
-                if (!itemBlackList.Contains(slot.GetStackName()) && matcher.Matches(slot)) {
+                if (!itemBlackList.Contains(slot.GetStackName()) && matcher.Matches(slot))
+                {
                     return i;
                 }
             }
@@ -101,9 +104,8 @@ namespace SmartCursor
         public object TransferToTransfer(ItemSlot sourceSlot, ItemSlot targetSlot)
         {
             ItemStackMoveOperation op = new ItemStackMoveOperation(
-                capi.World, EnumMouseButton.Left,
-                EnumModifierKey.SHIFT,
-                EnumMergePriority.AutoMerge, sourceSlot.StackSize)
+                capi.World, EnumMouseButton.Left, EnumModifierKey.SHIFT, EnumMergePriority.AutoMerge,
+                sourceSlot.StackSize)
             { ActingPlayer = capi.World.Player };
             return capi.World.Player.InventoryManager.TryTransferTo(sourceSlot, targetSlot, ref op);
         }

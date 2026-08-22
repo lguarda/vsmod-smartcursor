@@ -21,6 +21,7 @@ namespace SmartCursor
 
         // this function will be called each time item under cursor has changed
         // so here check if current matcher is related and add item matcher to the list accordingly
-        public abstract void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be, ItemStack item);
+        public abstract void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be,
+                                 ItemStack item);
     }
 }

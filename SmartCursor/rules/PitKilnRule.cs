@@ -58,11 +58,13 @@ namespace SmartCursor
 
         public bool IsRawClayItem(string path)
         {
-            if (path == null) return false;
+            if (path == null)
+                return false;
             return path.Split('-').Any(t => t == "raw");
         }
 
-        public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be, ItemStack item)
+        public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be,
+                                 ItemStack item)
         {
             if (be is BlockEntityPitKiln pk)
             {

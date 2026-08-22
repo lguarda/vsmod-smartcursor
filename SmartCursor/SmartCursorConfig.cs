@@ -4,7 +4,6 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Newtonsoft.Json;
 
-
 // thanks to
 // https://github.com/Xandu93/VSMods/blob/master/mods/xinvtweaks/src/InvTweaksConfig.cs
 // for the inspiration

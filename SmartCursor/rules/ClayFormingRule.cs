@@ -50,7 +50,8 @@ namespace SmartCursor
             }
         }
 
-        public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be, ItemStack item)
+        public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be,
+                                 ItemStack item)
         {
             if (sel == null)
             {

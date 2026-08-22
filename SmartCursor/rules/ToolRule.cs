@@ -58,7 +58,8 @@ namespace SmartCursor
 
         public ToolRule(SmartCursorConfig config, ICoreClientAPI api) : base(config, api) { }
 
-        public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be, ItemStack item)
+        public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be,
+                                 ItemStack item)
         {
             if (block == null)
                 return;

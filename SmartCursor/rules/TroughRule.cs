@@ -11,7 +11,8 @@ namespace SmartCursor
     {
 
         public TroughRule(SmartCursorConfig config, ICoreClientAPI api) : base(config, api) { }
-        public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be, ItemStack item)
+        public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be,
+                                 ItemStack item)
         {
             if (block is BlockTroughDoubleBlock doubleTrough)
             {
@@ -22,14 +23,16 @@ namespace SmartCursor
             {
                 var slot = trough.Inventory[0];
 
-                if (slot.Empty) {
+                if (slot.Empty)
+                {
                     // any grain any mash
                     matchers.Add(new ItemPathPartialMatcher("grain"));
                     matchers.Add(new ItemPathPartialMatcher("pressedmash"));
                     // Forced flax?
                     // matchers.Add(new ItemCodeMatcher("grain-flax"));
                 }
-                else {
+                else
+                {
                     string path = slot.Itemstack?.Collectible?.Code?.Path;
                     matchers.Add(new ItemCodeMatcher(path));
                 }

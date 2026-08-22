@@ -24,7 +24,8 @@ namespace SmartCursor
             return null;
         }
 
-        public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be, ItemStack item)
+        public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be,
+                                 ItemStack item)
         {
             if (be is not BlockEntityBloomery bloomery)
                 return;
@@ -50,7 +51,7 @@ namespace SmartCursor
                 // When the bloomery is full of ore, match any sufficient fuel
                 matchers.Add(new CombustibleThresholdMatcher(
                     capi, (combustibleProps, content) => combustibleProps.BurnTemperature >= 1200 &&
-                                                          combustibleProps.BurnDuration > 30 // avoid weird stuff
+                                                         combustibleProps.BurnDuration > 30 // avoid weird stuff
                     ));
             }
             else if (containsOre)
@@ -64,11 +65,10 @@ namespace SmartCursor
                 // Ore match smeltable ore items within temperature limits
                 matchers.Add(new CombustibleThresholdMatcher(
                     capi, (combustibleProps, content) => combustibleProps.SmeltedStack != null &&
-                                                          combustibleProps.MeltingPoint >= BlockEntityBloomery.MinTemp &&
-                                                          combustibleProps.MeltingPoint < BlockEntityBloomery.MaxTemp));
+                                                         combustibleProps.MeltingPoint >= BlockEntityBloomery.MinTemp &&
+                                                         combustibleProps.MeltingPoint < BlockEntityBloomery.MaxTemp));
             }
         }
-
     }
 
     public class CombustibleThresholdMatcher : ItemMatcher
@@ -76,8 +76,7 @@ namespace SmartCursor
         private readonly ICoreClientAPI capi;
         private readonly Func<CombustibleProperties, ICoreClientAPI, bool> matchFn;
 
-        public CombustibleThresholdMatcher(ICoreClientAPI capi,
-                                           Func<CombustibleProperties, ICoreClientAPI, bool> matchFn)
+        public CombustibleThresholdMatcher(ICoreClientAPI capi, Func<CombustibleProperties, ICoreClientAPI, bool> matchFn)
         {
             this.capi = capi;
             this.matchFn = matchFn;
@@ -114,9 +113,6 @@ namespace SmartCursor
             return (inv[0], inv[1], inv[2]);
         }
 
-        public static int GetOreCapacity(BlockEntityBloomery bloomery)
-        {
-            return (int)oreCapacityProp.GetValue(bloomery);
-        }
+        public static int GetOreCapacity(BlockEntityBloomery bloomery) { return (int)oreCapacityProp.GetValue(bloomery); }
     }
 }

@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, "vscons-build-utils/site_scons")
 
-from build_utils import git_version, cake_package, vs_run, roslynator, get_scons_vs_option, setup_modinfo, setup_cake_build, make_copy_target
+from build_utils import git_version, dotnet_fmt, cake_package, vs_run, roslynator, get_scons_vs_option, setup_modinfo, setup_cake_build, make_copy_target
 
 vars = Variables('.sconscache.py')
 get_scons_vs_option(vars)
