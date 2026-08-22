@@ -17,14 +17,12 @@ smartcursor_modinfo = setup_modinfo(env, "SmartCursor", False, True, "smartcurso
 smartcursor_cake = setup_cake_build(env, "CakeBuild", "SmartCursor", "Release")
 smartcursor_sources = [str(p) for p in Path('./SmartCursor').rglob('*.cs')]
 
-fmt = env.Command(
-    target=None,          # no build artifact
-    source=[smartcursor_sources],
-    action="clang-format -i $SOURCES"
-)
+def format(target, source, env):
+    dotnet_fmt("./SmartCursor/SmartCursor.csproj", str(env["VINTAGE_STORY"]), str(env["DOTNET_VERS"]))
 
+fmt = env.Command("fmt", smartcursor_sources, format)
+env.AlwaysBuild(fmt)
 env.Alias("format", fmt)
-env.Alias("fmt", fmt)
 
 smartcursor_release = f"Release/smartcursor_{env["GIT_VERSION"]}.zip"
 
