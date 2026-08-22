@@ -11,6 +11,9 @@ namespace SmartCursor
         public TorchRule(SmartCursorConfig config, ICoreClientAPI api) : base(config, api) { }
         public override void Run(List<ItemMatcher> matchers, BlockSelection sel, Block block, BlockEntity be, ItemStack item)
         {
+            // could use more generic rule with
+            // string blockCode = block?.Code?.Path;
+            // == torch-basic-extinct-up
             if (block is BlockTorch bt)
             {
                 if (bt.IsExtinct)

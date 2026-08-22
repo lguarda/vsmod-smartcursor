@@ -48,7 +48,7 @@ namespace SmartCursor
             isSmartToolHeld = false;
             state = stateManager;
             capi = api;
-            sh = new SlotHandler(capi, stateManager);
+            sh = new SlotHandler(capi, state);
 
             rules.Add(new LiveEntityRule(state.config, capi));
             if (state.config.extendedRule)
@@ -58,6 +58,7 @@ namespace SmartCursor
                 rules.Add(new BloomeryRule(state.config, capi));
                 rules.Add(new CrockRule(state.config, capi));
                 rules.Add(new ClayFormingRule(state.config, capi));
+                rules.Add(new TroughRule(state.config, capi));
             }
             rules.Add(new ToolRule(state.config, capi));
 
