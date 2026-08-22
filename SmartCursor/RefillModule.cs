@@ -89,7 +89,13 @@ namespace SmartCursor
             UseFlag.selfActionInProgress = true;
             try
             {
-                capi.ShowChatMessage($"Last Item was {itemToRefill?.Code?.Path}");
+                string path = itemToRefill?.Code?.Path;
+                if (path != null)
+                {
+                    List<ItemMatcher> matchers = new List<ItemMatcher>();
+                    matchers.Add(new ItemCodeMatcher(path));
+                    sh.PushItem(matchers, state.config.itemBlackList, sh.FlipTransfer);
+                }
                 // scan inventory, TryPutInto the matching stack into hotbar[slotIndex]
             }
             finally
