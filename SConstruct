@@ -1,10 +1,9 @@
-import subprocess
-import os
 import sys
+from pathlib import Path
 
 sys.path.insert(0, "vscons-build-utils/site_scons")
 
-from build_utils import git_version, dotnet_run, vs_run, roslynator, get_scons_vs_option, setup_modinfo, setup_cake_build, make_copy_target
+from build_utils import git_version, cake_package, vs_run, roslynator, get_scons_vs_option, setup_modinfo, setup_cake_build, make_copy_target
 
 vars = Variables('.sconscache.py')
 get_scons_vs_option(vars)
@@ -16,7 +15,7 @@ env["GIT_VERSION"] = git_version()
 
 smartcursor_modinfo = setup_modinfo(env, "SmartCursor", False, True, "smartcursor", "Smart cursor", "This mod aim to implement the smartcursor feature from terraria")
 smartcursor_cake = setup_cake_build(env, "CakeBuild", "SmartCursor", "Release")
-smartcursor_sources = Glob("SmartCursor/*.cs")
+smartcursor_sources = [str(p) for p in Path('./SmartCursor').rglob('*.cs')]
 
 fmt = env.Command(
     target=None,          # no build artifact
@@ -29,10 +28,10 @@ env.Alias("fmt", fmt)
 
 smartcursor_release = f"Release/smartcursor_{env["GIT_VERSION"]}.zip"
 
-def smartcursor_cake_run(target, source, env):
-    dotnet_run("./CakeBuild/CakeBuild.csproj", str(env["VINTAGE_STORY"]), str(env["DOTNET_VERS"]))
+def package(target, source, env):
+    cake_package("./CakeBuild/CakeBuild.csproj", str(env["VINTAGE_STORY"]), str(env["DOTNET_VERS"]))
 
-env.Command(smartcursor_release, smartcursor_sources, smartcursor_cake_run)
+env.Command(smartcursor_release, smartcursor_sources, package)
 env.Clean(smartcursor_release, ['SmartCursor/bin', 'SmartCursor/obj', 'Release'])
 env.Default(smartcursor_release)
 env.Depends(smartcursor_release, [smartcursor_modinfo, smartcursor_cake])

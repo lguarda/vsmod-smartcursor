@@ -1,2 +1,48 @@
+root = true
+
 [*.cs]
+# Diagnostics
+dotnet_diagnostic.IDE1006.severity = warning
 dotnet_diagnostic.CA1868.severity = silent
+
+# Formatting
+indent_style = space
+indent_size = 4
+tab_width = 4
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Styles
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+dotnet_naming_style.camel_case_style.capitalization = camel_case
+
+dotnet_naming_style.all_upper_style.capitalization = all_upper
+dotnet_naming_style.all_upper_style.word_separator = _
+
+# Symbols
+
+# Constants (const fields or local constants)
+dotnet_naming_symbols.constants.applicable_kinds = field, local
+dotnet_naming_symbols.constants.required_modifiers = const
+
+# Types & Functions (Classes, Structs, Enums, Interfaces, Delegates, Methods, Properties, Events)
+dotnet_naming_symbols.types_and_functions.applicable_kinds = class, struct, enum, interface, delegate, method, property, event
+
+# All Variables (Fields, Parameters, Local Variables regardless of public/private/static visibility)
+dotnet_naming_symbols.all_variables.applicable_kinds = field, parameter, local
+
+# Rules
+# All Const in upper camel
+dotnet_naming_rule.constants_must_be_all_upper.symbols = constants
+dotnet_naming_rule.constants_must_be_all_upper.style = all_upper_style
+dotnet_naming_rule.constants_must_be_all_upper.severity = warning
+# All Classes, Functions, Properties in PascalCase
+dotnet_naming_rule.types_and_functions_must_be_pascal.symbols = types_and_functions
+dotnet_naming_rule.types_and_functions_must_be_pascal.style = pascal_case_style
+dotnet_naming_rule.types_and_functions_must_be_pascal.severity = warning
+
+# All Variables (Public, Private, Static, Parameters, Locals) in camelCase
+dotnet_naming_rule.all_variables_must_be_camel.symbols = all_variables
+dotnet_naming_rule.all_variables_must_be_camel.style = camel_case_style
+dotnet_naming_rule.all_variables_must_be_camel.severity = warning

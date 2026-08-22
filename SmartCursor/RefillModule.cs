@@ -2,80 +2,96 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using System.Collections.Generic;
 
-namespace SmartCursor {
+namespace SmartCursor
+{
 
-public static class UseFlag {
-    public static bool SelfActionInProgress; // true only while OUR bag-put or pump code runs
-}
+    public static class UseFlag
+    {
+        public static bool selfActionInProgress; // true only while OUR bag-put or pump code runs
+    }
 
-public class RefillModule : IModModule {
-    private ICoreClientAPI _capi;
-    private ModStateManager _state;
+    public class RefillModule : IModModule
+    {
+        private ICoreClientAPI capi;
+        private ModStateManager state;
 
-    private long _lockedAt;
-    private const int GracePeriosMs = 200;
+        private long lockedAt;
+        private const int GRACE_PERIOS_MS = 200;
 
-    void OnHotbarSlotModified(int slotId) {
-        if (_state.Lock) {
-            _lockedAt = _capi.World.ElapsedMilliseconds;
-            return;
-        }
+        void OnHotbarSlotModified(int slotId)
+        {
+            if (state.Lock)
+            {
+                lockedAt = capi.World.ElapsedMilliseconds;
+                return;
+            }
 
-        var elapsed = _capi.World.ElapsedMilliseconds - _lockedAt;
-        if (elapsed < GracePeriosMs) return;
+            var elapsed = capi.World.ElapsedMilliseconds - lockedAt;
+            if (elapsed < GRACE_PERIOS_MS) return;
 
-        // Ignore in creative
-        if (_capi.World.Player.WorldData.CurrentGameMode == EnumGameMode.Creative)
-            return;
-
-        if (UseFlag.SelfActionInProgress)
-            return;
-
-        var invMgr = _capi.World.Player.InventoryManager;
-        var activeIndex = invMgr.ActiveHotbarSlotNumber;
-        if (slotId != activeIndex)
-            return;
-
-        _capi.Event.EnqueueMainThreadTask(() => {
-            // Ignore if player is mid mouse-drag (grabbed item sitting on cursor)
-            if (invMgr.MouseItemSlot != null && !invMgr.MouseItemSlot.Empty)
+            // Ignore in creative
+            if (capi.World.Player.WorldData.CurrentGameMode == EnumGameMode.Creative)
                 return;
 
-            var slot = invMgr.GetHotbarInventory()[slotId];
-            bool empty = slot.Itemstack == null || slot.StackSize == 0;
-            if (empty)
-                RunPumpLogic(slotId);
-        }, "smartcursor-slotcheck");
-    }
+            if (UseFlag.selfActionInProgress)
+                return;
 
-    void RunPumpLogic(int slotIndex) {
-        _capi.ShowChatMessage($"OMG 6");
-        UseFlag.SelfActionInProgress = true;
-        try {
-            // scan inventory, TryPutInto the matching stack into hotbar[slotIndex]
-        } finally {
-            UseFlag.SelfActionInProgress = false;
+            var invMgr = capi.World.Player.InventoryManager;
+            var activeIndex = invMgr.ActiveHotbarSlotNumber;
+            if (slotId != activeIndex)
+                return;
+
+            capi.Event.EnqueueMainThreadTask(() =>
+            {
+                // Ignore if player is mid mouse-drag (grabbed item sitting on cursor)
+                if (invMgr.MouseItemSlot != null && !invMgr.MouseItemSlot.Empty)
+                    return;
+
+                var slot = invMgr.GetHotbarInventory()[slotId];
+                bool empty = slot.Itemstack == null || slot.StackSize == 0;
+                if (empty)
+                    RunPumpLogic(slotId);
+            }, "smartcursor-slotcheck");
         }
-    }
 
-    void RunBagPutLogic(/* your hotkey handler args */) {
-        UseFlag.SelfActionInProgress = true;
-        try {
-            // your bag-put transfer here
-        } finally {
-            UseFlag.SelfActionInProgress = false;
+        void RunPumpLogic(int slotIndex)
+        {
+            capi.ShowChatMessage($"OMG 6");
+            UseFlag.selfActionInProgress = true;
+            try
+            {
+                // scan inventory, TryPutInto the matching stack into hotbar[slotIndex]
+            }
+            finally
+            {
+                UseFlag.selfActionInProgress = false;
+            }
         }
-    }
 
-    void OnPlayerSpawn(IClientPlayer byPlayer) {
-        byPlayer.InventoryManager.GetHotbarInventory().SlotModified += OnHotbarSlotModified;
-    }
+        void RunBagPutLogic(/* your hotkey handler args */)
+        {
+            UseFlag.selfActionInProgress = true;
+            try
+            {
+                // your bag-put transfer here
+            }
+            finally
+            {
+                UseFlag.selfActionInProgress = false;
+            }
+        }
 
-    public void Initialize(ICoreClientAPI capi, ModStateManager stateManager) {
-        capi.Event.PlayerEntitySpawn += OnPlayerSpawn;
-        _capi = capi;
-        _state = stateManager;
-    }
+        void OnPlayerSpawn(IClientPlayer byPlayer)
+        {
+            byPlayer.InventoryManager.GetHotbarInventory().SlotModified += OnHotbarSlotModified;
+        }
 
-}
+        public void Initialize(ICoreClientAPI api, ModStateManager stateManager)
+        {
+            capi.Event.PlayerEntitySpawn += OnPlayerSpawn;
+            capi = api;
+            state = stateManager;
+        }
+
+    }
 }
