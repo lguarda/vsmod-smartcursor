@@ -25,7 +25,8 @@ namespace SmartCursor
         static public void ShowHeldItemCode(ICoreClientAPI capi)
         {
             var slot = capi.World.Player.Entity.RightHandItemSlot;
-            if (slot?.Itemstack == null) {
+            if (slot?.Itemstack == null)
+            {
                 return;
             }
 

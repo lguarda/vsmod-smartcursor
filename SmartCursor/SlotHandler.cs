@@ -26,7 +26,6 @@ namespace SmartCursor
 
         public bool PushItem(List<ItemMatcher> matchers, HashSet<string> itemBlackList, SlotTransferDelegate transfer)
         {
-            capi.ShowChatMessage($"PUSH ITEM 1");
             ItemSlot currentSlot = capi.World.Player.InventoryManager.ActiveHotbarSlot;
             if (matchers == null || matchers.Count == 0)
             {
