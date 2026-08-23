@@ -261,48 +261,15 @@ namespace SmartCursor
             }
         }
 
-        private void DebugHighlightBlock(BlockPos pos)
-        {
-            if (pos != null)
-            {
-                capi.World.HighlightBlocks(capi.World.Player, 123, new List<BlockPos> { pos });
-            }
-        }
-        // void DumpItem(ItemStack stack) {
-        //     if (stack == null)
-        //         return;
-
-        //    var collectible = stack.Collectible;
-
-        //    capi.Logger.Notification($"=== ITEM ===");
-        //    capi.Logger.Notification($"Code: {collectible.Code}");
-        //    capi.Logger.Notification($"Class: {collectible.GetType().FullName}");
-        //    capi.Logger.Notification($"Attributes: {collectible.Attributes?.Token}");
-        //    capi.Logger.Notification($"Stack Attributes: {stack.Attributes?.ToJsonToken()}");
-        //}
-
-        // void ShowHeldItemCode() {
-        //     var slot = capi.World.Player.Entity.RightHandItemSlot;
-        //     if (slot?.Itemstack == null) {
-        //         capi.ShowChatMessage("[SmartCursor] Hand is empty");
-        //         return;
-        //     }
-
-        //    capi.Logger.Notification($"[SmartCursor] Held: {slot.Itemstack.Collectible.Code}");
-        //    capi.ShowChatMessage($"[SmartCursor] PATH: {slot.Itemstack.Collectible.Code.Path}");
-        //    capi.ShowChatMessage($"[SmartCursor] CODE: {slot.Itemstack.Collectible.Code}");
-        //    DumpItem(slot?.Itemstack);
-        //}
 
         private void StartSmartCursor(bool mode)
         {
-            // ShowHeldItemCode();
+            // SmartCursorUtils.ShowHeldItemCode(capi);
             isToggleMode = mode;
             if (!isSmartToolHeld)
             {
                 UnregisterSmartToolStopListListener();
                 listener = capi.Event.RegisterGameTickListener(SmartToolStopListListener, 100);
-                capi.ShowChatMessage($"OMG 1");
                 isSmartToolHeld = PushTool2();
             }
             else if (isToggleMode)

@@ -8,6 +8,29 @@ namespace SmartCursor
 {
     public class SmartCursorUtils
     {
+        static public void DumpItem(ICoreClientAPI capi, ItemStack stack)
+        {
+            if (stack == null)
+                return;
+
+            var collectible = stack.Collectible;
+
+            capi.Logger.Notification($"item stack ===");
+            capi.Logger.Notification($"Code: {collectible.Code}");
+            capi.Logger.Notification($"Class: {collectible.GetType().FullName}");
+            capi.Logger.Notification($"Attributes: {collectible.Attributes?.Token}");
+            capi.Logger.Notification($"Stack Attributes: {stack.Attributes?.ToJsonToken()}");
+        }
+
+        static public void ShowHeldItemCode(ICoreClientAPI capi)
+        {
+            var slot = capi.World.Player.Entity.RightHandItemSlot;
+            if (slot?.Itemstack == null) {
+                return;
+            }
+
+            DumpItem(capi, slot?.Itemstack);
+        }
 
         static public void DebugHighlightBlock(ICoreClientAPI capi, BlockPos pos)
         {

@@ -95,6 +95,7 @@ namespace SmartCursor
                     List<ItemMatcher> matchers = new List<ItemMatcher>();
                     matchers.Add(new ItemCodeMatcher(path));
                     sh.PushItem(matchers, state.config.itemBlackList, sh.FlipTransfer);
+                    // capi.ShowChatMessage($"Last Item was {itemToRefill?.Code?.Path}");
                 }
                 // scan inventory, TryPutInto the matching stack into hotbar[slotIndex]
             }
