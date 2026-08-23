@@ -32,12 +32,13 @@ def build_mod(env, mod_id, mod_name, desc, server=False, client=True):
         if "bin" not in p.parts and "obj" not in p.parts
     ]
     csproj = f"{mod_id}/{mod_id}.csproj"
-    release_zip = f"Release/{mod_id.lower()}_{env['GIT_VERSION']}.zip"
+    zip_label = f"{env['GIT_VERSION']}-debug" if env["DEBUG"] else env["GIT_VERSION"]
+    release_zip = f"Release/{mod_id.lower()}_{zip_label}.zip"
 
     modinfo = setup_modinfo(env, mod_id, server, client, mod_id.lower(), mod_name, desc)
 
     def _build_release(target, source, env):
-        build_mod_release(mod_id, mod_id.lower(), env["GIT_VERSION"], env)
+        build_mod_release(mod_id, mod_id.lower(), zip_label, env)
 
     env.Command(release_zip, sources, _build_release)
     env.Clean(release_zip, [f"{mod_id}/bin", f"{mod_id}/obj", "Release"])

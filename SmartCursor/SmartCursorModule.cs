@@ -264,7 +264,9 @@ namespace SmartCursor
 
         private void StartSmartCursor(bool mode)
         {
-            // SmartCursorUtils.ShowHeldItemCode(capi);
+            #if DEBUG
+            SmartCursorUtils.ShowHeldItemCode(capi);
+            #endif
             isToggleMode = mode;
             if (!isSmartToolHeld)
             {
