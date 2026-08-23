@@ -3,50 +3,85 @@ from pathlib import Path
 
 sys.path.insert(0, "vscons-build-utils/site_scons")
 
-from build_utils import git_version, dotnet_fmt, cake_package, vs_run, roslynator, get_scons_vs_option, setup_modinfo, setup_cake_build, make_copy_target
+from build_utils import (
+    git_version,
+    dotnet_fmt,
+    build_mod_release,
+    vs_run_game,
+    roslynator,
+    get_scons_vs_option,
+    setup_modinfo,
+    make_copy_target,
+)
 
-vars = Variables('.sconscache.py')
+# Handle options/args
+vars = Variables(".sconscache.py")
 get_scons_vs_option(vars)
 env = Environment(variables=vars)
 vars.Update(env)
-vars.Save('.sconscache.py', env)
+vars.Save(".sconscache.py", env)
 env.Help(vars.GenerateHelpText(env))
 env["GIT_VERSION"] = git_version()
 
-smartcursor_modinfo = setup_modinfo(env, "SmartCursor", False, True, "smartcursor", "Smart cursor", "This mod aim to implement the smartcursor feature from terraria")
-smartcursor_cake = setup_cake_build(env, "CakeBuild", "SmartCursor", "Release")
-smartcursor_sources = [str(p) for p in Path('./SmartCursor').rglob('*.cs')]
 
-def format(target, source, env):
-    dotnet_fmt("./SmartCursor/SmartCursor.csproj", str(env["VINTAGE_STORY"]), str(env["DOTNET_VERS"]))
+# I should probably put this in the buid utils
+def build_mod(env, mod_id, mod_name, desc, server=False, client=True):
+    src_dir = Path(mod_id)
+    sources = [
+        str(p) for p in src_dir.rglob("*.cs")
+        if "bin" not in p.parts and "obj" not in p.parts
+    ]
+    csproj = f"{mod_id}/{mod_id}.csproj"
+    release_zip = f"Release/{mod_id.lower()}_{env['GIT_VERSION']}.zip"
 
-fmt = env.Command("fmt", smartcursor_sources, format)
-env.AlwaysBuild(fmt)
-env.Alias("format", fmt)
+    modinfo = setup_modinfo(env, mod_id, server, client, mod_id.lower(), mod_name, desc)
 
-smartcursor_release = f"Release/smartcursor_{env["GIT_VERSION"]}.zip"
+    def _build_release(target, source, env):
+        build_mod_release(mod_id, mod_id.lower(), env["GIT_VERSION"], env)
 
-def package(target, source, env):
-    cake_package("./CakeBuild/CakeBuild.csproj", str(env["VINTAGE_STORY"]), str(env["DOTNET_VERS"]))
+    env.Command(release_zip, sources, _build_release)
+    env.Clean(release_zip, [f"{mod_id}/bin", f"{mod_id}/obj", "Release"])
+    env.Depends(release_zip, modinfo)
 
-env.Command(smartcursor_release, smartcursor_sources, package)
-env.Clean(smartcursor_release, ['SmartCursor/bin', 'SmartCursor/obj', 'Release'])
+    def _fmt(target, source, env):
+        dotnet_fmt(csproj, env)
+
+    fmt = env.Command("fmt", sources, _fmt)
+    env.AlwaysBuild(fmt)
+    env.Alias("format", fmt)
+
+    # not working yet
+    # def _check(target, source, env):
+    #     roslynator(csproj, env)
+
+    # check = env.Command("check", [], _check)
+    # env.AlwaysBuild(check)
+
+    install = env.InstallAs(
+        target=f"{env['VINTAGE_STORY_DATA']}/Mods/{mod_id.lower()}.zip",
+        source=release_zip,
+    )
+    env.Alias("install", install)
+
+    return release_zip
+
+
+# Builds targets
+smartcursor_release = build_mod(
+    env,
+    mod_id="SmartCursor",
+    mod_name="Smart cursor",
+    desc="This mod aims to implement the smart cursor feature from Terraria",
+)
+
 env.Default(smartcursor_release)
-env.Depends(smartcursor_release, [smartcursor_modinfo, smartcursor_cake])
 
-smartcursor_install_release = env.InstallAs(target=f"{str(env["VINTAGE_STORY_DATA"])}/Mods/smartcursor.zip", source=smartcursor_release)
+# Tools targets
+def _run_action(target, source, env):
+    vs_run_game(env)
 
-env.Alias("install", smartcursor_install_release)
-
-def run_program(target, source, env):
-    vs_run(env)
-
-run = env.Command("run", [], run_program)
-
+run = env.Command("run", [], _run_action)
 env.AlwaysBuild(run)
 
-check = env.Command("check", [], roslynator)
-env.AlwaysBuild(check)
-
-make_copy_target("backupsave", f"{env["VINTAGE_STORY_DATA"]}/Saves", f"{env["VINTAGE_STORY_DATA"]}/Saves.bak")
-make_copy_target("restoresave", f"{env["VINTAGE_STORY_DATA"]}/Saves.bak", f"{env["VINTAGE_STORY_DATA"]}/Saves")
+make_copy_target("backupsave", f"{env['VINTAGE_STORY_DATA']}/Saves", f"{env['VINTAGE_STORY_DATA']}/Saves.bak")
+make_copy_target("restoresave", f"{env['VINTAGE_STORY_DATA']}/Saves.bak", f"{env['VINTAGE_STORY_DATA']}/Saves")
