@@ -79,6 +79,8 @@ namespace SmartCursor
             {
                 capi.Network.SendPacketClient(obj);
             }
+            sourceSlot.MarkDirty();
+            targetSlot.MarkDirty();
             return true;
         }
 
