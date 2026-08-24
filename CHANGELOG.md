@@ -10,6 +10,8 @@
 - Crock: will bring up beeswax or bowl.
 - PitKiln: will sequentially bring up drygrass -> stick -> fuel.
 - Unlit torch: will bring up lit torch.
+### Fixed
+- Ramdomly swaped slot via smartcursor could visualy be wrong
 
 ## [0.3.2] - 2026-03-09
 ### Changed
