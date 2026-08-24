@@ -1,4 +1,6 @@
 import sys
+import os
+import subprocess
 from pathlib import Path
 
 sys.path.insert(0, "vscons-build-utils/site_scons")
@@ -12,6 +14,7 @@ from build_utils import (
     get_scons_vs_option,
     setup_modinfo,
     make_copy_target,
+    sym_link
 )
 
 # Handle options/args
@@ -73,7 +76,7 @@ def build_mod(env, sources, mod_id, mod_name, desc, server=False, client=True):
 SConscript('./vsqa/SConscript', exports='env')
 Import('vsqa_csproj_path', 'vsqa_sources')
 
-
+print (vsqa_sources)
 def _build_vsqa_dotnet(csproj):
     proc_env = os.environ.copy()
     proc_env["VINTAGE_STORY"] = env["VINTAGE_STORY"]
@@ -82,13 +85,19 @@ def _build_vsqa_dotnet(csproj):
         "publish",
         csproj,
     ]
-    subprocess.run(cmd, env=proc_env)
+    subprocess.run(cmd,
+    cwd="vsqa",
+    env=proc_env)
 
 def build_vsqa_dotnet(target, source, env):
     _build_vsqa_dotnet(vsqa_csproj_path)
 
-build = env.Command("build", [vsqa_sources,], build_vsqa_dotnet)
+build_vsqa = env.Command("build", [vsqa_sources], build_vsqa_dotnet)
 
+vsqa_install = env.Command(Path(env["VINTAGE_STORY_DATA"]) / "Mods" / "vsqa", "vsqa/bin/Release/publish", sym_link)
+
+env.Alias("vsqa", build_vsqa)
+env.Alias("vsqai", vsqa_install)
 
 # Builds targets
 smartcursor_release = build_mod(
