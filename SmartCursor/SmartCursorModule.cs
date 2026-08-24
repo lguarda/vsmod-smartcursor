@@ -113,6 +113,9 @@ namespace SmartCursor
         private bool SmartToolReload()
         {
             string selSign = GetCurrentSelectionSignature();
+#if DEBUG
+            SmartCursorUtils.Log(capi, $"Target Signature{selSign}");
+#endif
             ItemSlot currentSlot = capi.World.Player.InventoryManager.ActiveHotbarSlot;
 
             bool selectionChanged = selSign != previousBlockCode;

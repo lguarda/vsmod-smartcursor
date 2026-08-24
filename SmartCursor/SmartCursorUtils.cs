@@ -8,6 +8,11 @@ namespace SmartCursor
 {
     public class SmartCursorUtils
     {
+        static public void Log(ICoreClientAPI capi, string msg)
+        {
+            capi.Logger.Notification(msg);
+            capi.ShowChatMessage(msg);
+        }
         static public void DumpItem(ICoreClientAPI capi, ItemStack stack)
         {
             if (stack == null)
