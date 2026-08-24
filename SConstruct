@@ -23,25 +23,29 @@ vars.Save(".sconscache.py", env)
 env.Help(vars.GenerateHelpText(env))
 env["GIT_VERSION"] = git_version()
 
+# This should be the source path dir it will be lower cased for read modid in json modinfo.file
+mod_id="SmartCursor"
+
+# Define source so scons know when to rebuild
+# I should probably check if dotnet don't already handle this
+src_dir = Path('./src')
+sources = [
+    str(p) for p in src_dir.rglob("*.cs")
+]
 
 # I should probably put this in the buid utils
-def build_mod(env, mod_id, mod_name, desc, server=False, client=True):
-    src_dir = Path(mod_id)
-    sources = [
-        str(p) for p in src_dir.rglob("*.cs")
-        if "bin" not in p.parts and "obj" not in p.parts
-    ]
-    csproj = f"{mod_id}/{mod_id}.csproj"
+def build_mod(env, sources, mod_id, mod_name, desc, server=False, client=True):
+    csproj = f"{mod_id}.csproj"
     zip_label = f"{env['GIT_VERSION']}-debug" if env["DEBUG"] else env["GIT_VERSION"]
     release_zip = f"Release/{mod_id.lower()}_{zip_label}.zip"
 
-    modinfo = setup_modinfo(env, mod_id, server, client, mod_id.lower(), mod_name, desc)
+    modinfo = setup_modinfo(env, "./bin", server, client, mod_id.lower(), mod_name, desc)
 
     def _build_release(target, source, env):
-        build_mod_release(mod_id, mod_id.lower(), zip_label, env)
+        build_mod_release("./src", mod_id.lower(), zip_label, env)
 
     env.Command(release_zip, sources, _build_release)
-    env.Clean(release_zip, [f"{mod_id}/bin", f"{mod_id}/obj", "Release"])
+    env.Clean(release_zip, [f"bin", f"obj", "Release"])
     env.Depends(release_zip, modinfo)
 
     def _fmt(target, source, env):
@@ -66,10 +70,30 @@ def build_mod(env, mod_id, mod_name, desc, server=False, client=True):
 
     return release_zip
 
+SConscript('./vsqa/SConscript', exports='env')
+Import('vsqa_csproj_path', 'vsqa_sources')
+
+
+def _build_vsqa_dotnet(csproj):
+    proc_env = os.environ.copy()
+    proc_env["VINTAGE_STORY"] = env["VINTAGE_STORY"]
+    cmd = [
+        "dotnet",
+        "publish",
+        csproj,
+    ]
+    subprocess.run(cmd, env=proc_env)
+
+def build_vsqa_dotnet(target, source, env):
+    _build_vsqa_dotnet(vsqa_csproj_path)
+
+build = env.Command("build", [vsqa_sources,], build_vsqa_dotnet)
+
 
 # Builds targets
 smartcursor_release = build_mod(
     env,
+    sources,
     mod_id="SmartCursor",
     mod_name="Smart cursor",
     desc="This mod aims to implement the smart cursor feature from Terraria",

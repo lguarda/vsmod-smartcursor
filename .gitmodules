@@ -1,3 +1,6 @@
 [submodule "vscons-build-utils"]
 	path = vscons-build-utils
 	url = git@github.com:lguarda/vscons-build-utils.git
+[submodule "vsqa"]
+	path = vsqa
+	url = git@github.com:lguarda/vsqa.git
