@@ -53,6 +53,8 @@ namespace SmartCursor
             rules.Add(new LiveEntityRule(state.config, capi));
             if (state.config.extendedRule)
             {
+                // it work let's go
+                //rules.Add(new PipetteRule(state.config, capi));
                 rules.Add(new TorchRule(state.config, capi));
                 rules.Add(new PitKilnRule(state.config, capi));
                 rules.Add(new BloomeryRule(state.config, capi));
@@ -222,7 +224,7 @@ namespace SmartCursor
             }
         }
 
-        private List<ItemMatcher> BuildMatcherList()
+        private List<ItemMatcher> BuildMatcherList(List<AbstractRule> rules_list)
         {
             List<ItemMatcher> matchers = new List<ItemMatcher>();
 
@@ -233,7 +235,7 @@ namespace SmartCursor
             var slot = OpenStorageSelector.GetTargetedStorageItem(capi);
             ItemStack stack = slot?.Itemstack;
 
-            foreach (var rule in rules)
+            foreach (var rule in rules_list)
             {
                 rule.Run(matchers, bs, block, be, stack);
             }
@@ -268,6 +270,20 @@ namespace SmartCursor
         private void StartSmartCursor(bool mode)
         {
 #if DEBUG
+            BlockSelection bs = capi.World.Player.CurrentBlockSelection;
+            var es = capi.World.Player.CurrentEntitySelection?.Entity;
+            if (bs != null)
+            {
+                Block block = capi.World.BlockAccessor.GetBlock(bs.Position);
+                SmartCursorUtils.Log(capi, $"Target block code {block?.Code}");
+            }
+            if (es != null) {
+                SmartCursorUtils.Log(capi,
+                    $"Entity: {es.Code}, " +
+                    $"Type: {es.GetType().FullName}, " +
+                    $"Id: {es.EntityId}"
+                );
+            }
             SmartCursorUtils.ShowHeldItemCode(capi);
 #endif
             isToggleMode = mode;

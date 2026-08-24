@@ -20,11 +20,11 @@ namespace SmartCursor
 
             var collectible = stack.Collectible;
 
-            capi.Logger.Notification($"item stack ===");
-            capi.Logger.Notification($"Code: {collectible.Code}");
-            capi.Logger.Notification($"Class: {collectible.GetType().FullName}");
-            capi.Logger.Notification($"Attributes: {collectible.Attributes?.Token}");
-            capi.Logger.Notification($"Stack Attributes: {stack.Attributes?.ToJsonToken()}");
+            //capi.Logger.Notification($"item stack ===");
+            Log(capi, $"Code: {collectible.Code}");
+            //capi.Logger.Notification($"Class: {collectible.GetType().FullName}");
+            //capi.Logger.Notification($"Attributes: {collectible.Attributes?.Token}");
+            //capi.Logger.Notification($"Stack Attributes: {stack.Attributes?.ToJsonToken()}");
         }
 
         static public void ShowHeldItemCode(ICoreClientAPI capi)
