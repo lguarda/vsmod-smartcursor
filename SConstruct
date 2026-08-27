@@ -27,7 +27,7 @@ env.Help(vars.GenerateHelpText(env))
 env["GIT_VERSION"] = git_version()
 
 # This should be the source path dir it will be lower cased for read modid in json modinfo.file
-mod_id="SmartCursor"
+mod_id="smartcursor"
 
 # Define source so scons know when to rebuild
 # I should probably check if dotnet don't already handle this
@@ -40,14 +40,14 @@ sources = [
 def build_mod(env, sources, mod_id, mod_name, desc, server=False, client=True):
     csproj = f"{mod_id}.csproj"
     zip_label = f"{env['GIT_VERSION']}-debug" if env["DEBUG"] else env["GIT_VERSION"]
-    release_zip = f"Release/{mod_id.lower()}_{zip_label}.zip"
+    release_zip = f"Release/{mod_id}_{zip_label}.zip"
 
-    modinfo = setup_modinfo(env, "./bin", server, client, mod_id.lower(), mod_name, desc)
+    modinfo = setup_modinfo(env, "./bin", server, client, mod_id, mod_name, desc)
 
     def _build_release(target, source, env):
-        build_mod_release("./src", mod_id.lower(), zip_label, env)
+        return build_mod_release("./src", mod_id, zip_label, env)
 
-    env.Command(release_zip, sources, _build_release)
+    env.Command(release_zip, [sources, csproj], _build_release)
     env.Clean(release_zip, [f"bin", f"obj", "Release"])
     env.Depends(release_zip, modinfo)
 
@@ -66,7 +66,7 @@ def build_mod(env, sources, mod_id, mod_name, desc, server=False, client=True):
     # env.AlwaysBuild(check)
 
     install = env.InstallAs(
-        target=f"{env['VINTAGE_STORY_DATA']}/Mods/{mod_id.lower()}.zip",
+        target=f"{env['VINTAGE_STORY_DATA']}/Mods/{mod_id}.zip",
         source=release_zip,
     )
     env.Alias("install", install)
@@ -85,12 +85,13 @@ def _build_vsqa_dotnet(csproj):
         "publish",
         csproj,
     ]
-    subprocess.run(cmd,
+    res = subprocess.run(cmd,
     cwd="vsqa",
     env=proc_env)
+    return res.returncode
 
 def build_vsqa_dotnet(target, source, env):
-    _build_vsqa_dotnet(vsqa_csproj_path)
+    return _build_vsqa_dotnet(vsqa_csproj_path)
 
 build_vsqa = env.Command("build", [vsqa_sources], build_vsqa_dotnet)
 
@@ -103,7 +104,7 @@ env.Alias("vsqai", vsqa_install)
 smartcursor_release = build_mod(
     env,
     sources,
-    mod_id="SmartCursor",
+    mod_id=mod_id,
     mod_name="Smart cursor",
     desc="This mod aims to implement the smart cursor feature from Terraria",
 )
