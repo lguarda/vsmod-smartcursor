@@ -37,6 +37,9 @@ namespace SmartCursor
             return false;
         }
 
+        // I don't really like this but until i found reliable way
+        // to get inventory event polltick is completely debunced and
+        // refill seems to works ok
         void OnPollTick(float dt)
         {
             if (UseFlag.selfActionInProgress)
@@ -57,23 +60,28 @@ namespace SmartCursor
                 var cur = slot.Itemstack;
                 var prev = prevSnapshot[i];
 
-                bool wasEmpty = prev == null;
-                bool isEmpty = cur == null || slot.StackSize == 0;
+                // prev exist so was not empty and is a stackable item
+                if (prev != null && (prev?.Collectible?.MaxStackSize ?? 0) > 1) {
+                    // TODO some item get taken 2 by to or one by one
+                    // bool isEmpty = cur == null || slot.StackSize <= 0;
+                    // here choosing 1 for isempty mean when  there's still one item
+                    // the refill kicks in
+                    bool becameEmpty = cur == null || slot.StackSize <= 1;
 
-                bool becameEmpty = !wasEmpty && isEmpty;
-                bool eligible = becameEmpty && i == active && activeSlotStable && !dragging && !IsInventoryOpen();
+                    bool eligible = becameEmpty && i == active && activeSlotStable && !dragging && !IsInventoryOpen();
 
-                if (eligible && prev.Collectible.MaxStackSize > 1)
-                {
-
-                    var elapsed = capi.World.ElapsedMilliseconds - lockedAt;
-                    if (state.Lock)
+                    if (eligible && prev.Collectible.MaxStackSize > 1)
                     {
-                        lockedAt = capi.World.ElapsedMilliseconds;
-                    }
-                    else if (elapsed > GRACE_PERIOS_MS)
-                    {
-                        RunPumpLogic(i, prev.Collectible);
+
+                        var elapsed = capi.World.ElapsedMilliseconds - lockedAt;
+                        if (state.Lock)
+                        {
+                            lockedAt = capi.World.ElapsedMilliseconds;
+                        }
+                        else if (elapsed > GRACE_PERIOS_MS)
+                        {
+                            RunPumpLogic(i, prev.Collectible);
+                        }
                     }
                 }
 
@@ -94,10 +102,12 @@ namespace SmartCursor
                 {
                     List<ItemMatcher> matchers = new List<ItemMatcher>();
                     matchers.Add(new ItemCodeMatcher(path));
-                    sh.PushItem(matchers, state.config.itemBlackList, sh.FlipTransfer);
+                    var ms = sh.PushItem(matchers, state.config.itemBlackList, SlotHandlerCurrentSlotMethod.Ignore);
+                    if (ms != null) {
+                        sh.TransferSavedSlot(ms, sh.TransferToTransfer);
+                    }
                     // capi.ShowChatMessage($"Last Item was {itemToRefill?.Code?.Path}");
                 }
-                // scan inventory, TryPutInto the matching stack into hotbar[slotIndex]
             }
             finally
             {
