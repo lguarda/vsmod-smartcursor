@@ -28,6 +28,9 @@ namespace SmartCursor
         {
             switch (hotkeycode)
             {
+                case SmartCursorKeybind.HOTKEY_SMARTCURSOR_PIPETTE:
+                    StartPipette();
+                    break;
                 case SmartCursorKeybind.HOTKEY_SMARTCURSOR:
                     StartSmartCursor(false);
                     break;
@@ -35,7 +38,7 @@ namespace SmartCursor
                     StartSmartCursor(true);
                     break;
                 case SmartCursorKeybind.HOTKEY_SMARTCURSOR_ONE_SHOT:
-                    PushTool2();
+                    PushItem();
                     break;
                 case SmartCursorKeybind.HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE:
                     BlackListItem();
@@ -69,10 +72,11 @@ namespace SmartCursor
             SmartCursorKeybind.RegisterClientKey(capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR, GlKeys.R);
             SmartCursorKeybind.RegisterClientKey(capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_TOGGLE, GlKeys.R, null, true);
             SmartCursorKeybind.RegisterClientKey(capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_ONE_SHOT, GlKeys.Unknown);
+            SmartCursorKeybind.RegisterClientKey(capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_PIPETTE, GlKeys.Unknown);
             capi.Input.AddHotkeyListener(HotKeyListener);
         }
 
-        private string GetCurrentSelectionSignature()
+        private string GetCurrentSelectionSignature(List<AbstractRule> rules_list)
         {
             BlockSelection bs = capi.World.Player.CurrentBlockSelection;
             if (bs == null)
@@ -89,7 +93,7 @@ namespace SmartCursor
 
             var be = capi.World.BlockAccessor.GetBlockEntity(bs.Position);
 
-            foreach (var rule in rules)
+            foreach (var rule in rules_list)
             {
                 string signature = rule.BuildSignature(bs, block, be);
                 if (signature != null)
@@ -114,7 +118,7 @@ namespace SmartCursor
 
         private bool SmartToolReload()
         {
-            string selSign = GetCurrentSelectionSignature();
+            string selSign = GetCurrentSelectionSignature(rules);
 #if DEBUG
             SmartCursorUtils.Log(capi, $"Target Signature{selSign}");
 #endif
@@ -137,11 +141,12 @@ namespace SmartCursor
                 currentSlot = capi.World.Player.InventoryManager.ActiveHotbarSlot;
             }
 
-            List<ItemMatcher> matchers = BuildMatcherList();
+            // here remove this with new slothandler
+            List<ItemMatcher> matchers = BuildMatcherList(rules);
             if (matchers.Count > 0 && !IsRightItem2(currentSlot, matchers))
             {
                 PopTool(); // no-op if handDepleted branch already popped
-                isSmartToolHeld = PushTool2();
+                isSmartToolHeld = PushItem();
                 return true;
             }
 
@@ -243,11 +248,34 @@ namespace SmartCursor
             return matchers;
         }
 
-        private bool PushTool2()
+        private bool PushItem()
         {
-            List<ItemMatcher> matchers = BuildMatcherList();
-            return sh.PushItem(matchers, state.config.itemBlackList, sh.FlipTransfer);
+            List<ItemMatcher> matchers = BuildMatcherList(rules);
+            var ms = sh.PushItem(matchers, state.config.itemBlackList);
+            if (ms == null) {
+                return false;
+            }
+            return sh.TransferSavedSlot(ms, sh.FlipTransfer);
         }
+
+        private bool Pipette()
+        {
+            List<ItemMatcher> matchers = new List<ItemMatcher>();
+            AbstractRule pipetteRule = new PipetteRule(state.config, capi);
+
+            BlockSelection bs = capi.World.Player.CurrentBlockSelection;
+            Block block = bs != null ? capi.World.BlockAccessor.GetBlock(bs.Position) : null;
+            //pipetteRule.Run(matchers, bs, block, null, null);
+            pipetteRule.Run(matchers, null, block, null, null);
+
+            var ms = sh.PushItem(matchers, null);
+            if (ms == null) {
+                return false;
+            }
+            return sh.TransferSavedSlot(ms, sh.FlipTransfer);
+        }
+
+
 
         private void UnregisterSmartToolStopListListener()
         {
@@ -269,35 +297,47 @@ namespace SmartCursor
 
         private void StartSmartCursor(bool mode)
         {
-#if DEBUG
-            BlockSelection bs = capi.World.Player.CurrentBlockSelection;
-            var es = capi.World.Player.CurrentEntitySelection?.Entity;
-            if (bs != null)
-            {
-                Block block = capi.World.BlockAccessor.GetBlock(bs.Position);
-                SmartCursorUtils.Log(capi, $"Target block code {block?.Code}");
-            }
-            if (es != null) {
-                SmartCursorUtils.Log(capi,
-                    $"Entity: {es.Code}, " +
-                    $"Type: {es.GetType().FullName}, " +
-                    $"Id: {es.EntityId}"
-                );
-            }
-            SmartCursorUtils.ShowHeldItemCode(capi);
-#endif
-            isToggleMode = mode;
-            if (!isSmartToolHeld)
-            {
-                UnregisterSmartToolStopListListener();
-                listener = capi.Event.RegisterGameTickListener(SmartToolStopListListener, 100);
-                isSmartToolHeld = PushTool2();
-            }
-            else if (isToggleMode)
+ #if DEBUG
+             BlockSelection bs = capi.World.Player.CurrentBlockSelection;
+             var es = capi.World.Player.CurrentEntitySelection?.Entity;
+             if (bs != null)
+             {
+                 Block block = capi.World.BlockAccessor.GetBlock(bs.Position);
+                 SmartCursorUtils.Log(capi, $"Target block code {block?.Code}");
+             }
+             if (es != null) {
+                 SmartCursorUtils.Log(capi,
+                     $"Entity: {es.Code}, " +
+                     $"Type: {es.GetType().FullName}, " +
+                     $"Id: {es.EntityId}"
+                 );
+             }
+             SmartCursorUtils.ShowHeldItemCode(capi);
+ #endif
+             isToggleMode = mode;
+             if (!isSmartToolHeld)
+             {
+                 UnregisterSmartToolStopListListener();
+                 listener = capi.Event.RegisterGameTickListener(SmartToolStopListListener, 100);
+                 isSmartToolHeld = PushItem();
+             }
+             else if (isToggleMode)
+             {
+                 PopTool();
+                 UnregisterSmartToolStopListListener();
+             }
+        }
+
+        private void StartPipette()
+        {
+            isToggleMode = true;
+            UnregisterSmartToolStopListListener();
+            if (isSmartToolHeld)
             {
                 PopTool();
-                UnregisterSmartToolStopListListener();
             }
+            listener = capi.Event.RegisterGameTickListener(SmartToolStopListListener, 100);
+            isSmartToolHeld = Pipette();
         }
     }
 }

@@ -15,6 +15,7 @@ namespace SmartCursor
     {
 
         public const string HOTKEY_SMARTCURSOR = "smartcursor";
+        public const string HOTKEY_SMARTCURSOR_PIPETTE = "smartcursor pipette";
         public const string HOTKEY_SMARTCURSOR_TOGGLE = "smartcursor toggle";
         public const string HOTKEY_SMARTCURSOR_ONE_SHOT = "smartcursor one shot";
         public const string HOTKEY_SMARTCURSOR_BLACKLIST_TOGGLE = "smartcursor blacklist toggle";
