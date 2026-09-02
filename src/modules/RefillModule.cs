@@ -49,6 +49,10 @@ namespace SmartCursor
         // refill seems to works ok
         void OnPollTick(float dt)
         {
+            if (!state.config.slotRefill) {
+                Dispose()
+                return;
+            }
             if (state.lockInv)
             {
                 return;
@@ -121,21 +125,18 @@ namespace SmartCursor
             }
         }
 
-        void OnPlayerSpawn(IClientPlayer byPlayer)
-        {
-            tickListenerId = capi.Event.RegisterGameTickListener(OnPollTick, 100);
-        }
-
         public void Initialize(ICoreClientAPI api, ModStateManager stateManager)
         {
             capi = api;
             state = stateManager;
+            if (!state.config.slotRefill) {
+                return ;
+            }
             sh = new SlotHandler(capi, state);
-            capi.Event.PlayerEntitySpawn += OnPlayerSpawn;
+            tickListenerId = capi.Event.RegisterGameTickListener(OnPollTick, 100);
         }
         public void Dispose()
         {
-            capi.Event.PlayerEntitySpawn -= OnPlayerSpawn;
             if (tickListenerId >= 0)
             {
                 capi.Event.UnregisterGameTickListener(tickListenerId);

@@ -18,6 +18,8 @@ namespace SmartCursor
         public string[] inventories;
         public bool continuousMode;
         public bool extendedRule;
+        public bool putitinthebag;
+        public bool slotRefill;
 
         public SmartCursorConfig()
         {
@@ -27,12 +29,14 @@ namespace SmartCursor
 
             // All other non tool related smartcursor interaction
             extendedRule = true;
+            putitinthebag = false;
+            slotRefill = false;
 
             inventories = new string[] {
-            "toolbelt",                           // salty's toolbelt
-            GlobalConstants.hotBarInvClassName,   // "hotbar"
-            GlobalConstants.backpackInvClassName, // "backpack"
-        };
+                "toolbelt",                           // salty's toolbelt
+                GlobalConstants.hotBarInvClassName,   // "hotbar"
+                GlobalConstants.backpackInvClassName, // "backpack"
+            };
 
             domainTools = new()
             {

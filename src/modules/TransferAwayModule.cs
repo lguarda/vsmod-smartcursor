@@ -23,12 +23,20 @@ namespace SmartCursor
         {
             capi = api;
             state = stateManager;
+            if (!state.config.putitinthebag)
+            {
+                return;
+            }
             SmartCursorKeybind.RegisterClientKey(capi, SmartCursorKeybind.HOTKEY_SMARTCURSOR_PUTITINTHEBAG, GlKeys.B,
                                                  OnPutInBagHotkeyPressed);
         }
 
         private bool PutItemInInventory(ItemSlot sourceSlot)
         {
+            if (!state.config.putitinthebag)
+            {
+                return false;
+            }
             if (sourceSlot == null || sourceSlot.Empty)
                 return false;
 
