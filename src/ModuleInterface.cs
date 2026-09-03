@@ -45,10 +45,12 @@ namespace SmartCursor
             }
         }
 
-        public void Lock() {
+        public void Lock()
+        {
             lockInv = true;
         }
-        public void Unlock() {
+        public void Unlock()
+        {
             unlockAt = capi.World.ElapsedMilliseconds;
             lockInv = false;
         }
@@ -57,7 +59,7 @@ namespace SmartCursor
     public interface IModModule
     {
         void Initialize(ICoreClientAPI capi, ModStateManager stateManager);
-        void Dispose() {}
+        void Dispose() { }
     }
 
     public class GlobalSystem : ModSystem
@@ -80,11 +82,11 @@ namespace SmartCursor
 
         public void LoadModules()
         {
-                    var moduleTypes = Assembly.GetExecutingAssembly() // or GetAssemblies() for multiple
-                .GetTypes()
-                .Where(t => t.IsClass && !t.IsAbstract
-                    && typeof(IModModule).IsAssignableFrom(t)
-                    && t.GetCustomAttribute<ModModuleAttribute>() != null);
+            var moduleTypes = Assembly.GetExecutingAssembly() // or GetAssemblies() for multiple
+        .GetTypes()
+        .Where(t => t.IsClass && !t.IsAbstract
+            && typeof(IModModule).IsAssignableFrom(t)
+            && t.GetCustomAttribute<ModModuleAttribute>() != null);
 
             modules = moduleTypes
                 .Select(t => (IModModule)Activator.CreateInstance(t)!)
@@ -97,7 +99,8 @@ namespace SmartCursor
             modules.Add(module);
         }
 
-        public override void Dispose() {
+        public override void Dispose()
+        {
             foreach (var m in modules) m.Dispose();
         }
 

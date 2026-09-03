@@ -7,7 +7,8 @@ namespace SmartCursor
 {
 
     public delegate object SlotTransferDelegate(ItemSlot sourceSlot, ItemSlot targetSlot);
-    public class MatchedSlot {
+    public class MatchedSlot
+    {
         public int index;
         public string inventoryName;
     }
@@ -45,7 +46,8 @@ namespace SmartCursor
             {
                 if (matcher.Matches(currentSlot))
                 {
-                    if (method == SlotHandlerCurrentSlotMethod.Stop) {
+                    if (method == SlotHandlerCurrentSlotMethod.Stop)
+                    {
                         return null;
                     }
 
@@ -83,7 +85,8 @@ namespace SmartCursor
             for (int i = 0; i < inventory.Count; i++)
             {
                 ItemSlot slot = inventory[i];
-                if (inventory.ClassName == "hotbar" && slot == currentSlot) {
+                if (inventory.ClassName == "hotbar" && slot == currentSlot)
+                {
                     continue;
                 }
                 if ((itemBlackList == null || !itemBlackList.Contains(slot.GetStackName())) && matcher.Matches(slot))
@@ -94,7 +97,8 @@ namespace SmartCursor
             return -1;
         }
 
-        public bool TransferSavedSlot(MatchedSlot ms, SlotTransferDelegate transfer) {
+        public bool TransferSavedSlot(MatchedSlot ms, SlotTransferDelegate transfer)
+        {
             savedSlotIndex = ms.index;
             savedSlotInventoryName = ms.inventoryName;
             savedActiveSlotIndex = capi.World.Player.InventoryManager.ActiveHotbarSlotNumber;
@@ -116,7 +120,9 @@ namespace SmartCursor
                 sourceSlot.MarkDirty();
                 targetSlot.MarkDirty();
                 SmartCursorUtils.Log(capi, $"AFTER: source.StackSize={sourceSlot?.Itemstack?.StackSize}, target.StackSize={targetSlot?.Itemstack?.StackSize}");
-            } else {
+            }
+            else
+            {
                 SmartCursorUtils.Log(capi, $" tranfer fail");
             }
             return true;

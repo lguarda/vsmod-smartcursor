@@ -47,7 +47,8 @@ namespace SmartCursor
             }
         }
 
-        public void Dispose() {
+        public void Dispose()
+        {
             UnregisterSmartToolStopListListener();
         }
         public void Initialize(ICoreClientAPI api, ModStateManager stateManager)
@@ -256,10 +257,12 @@ namespace SmartCursor
         {
             bool ret = false;
             state.Lock();
-            try {
+            try
+            {
                 List<ItemMatcher> matchers = BuildMatcherList(rules);
                 var ms = sh.PushItem(matchers, state.config.itemBlackList);
-                if (ms == null) {
+                if (ms == null)
+                {
                     return false;
                 }
                 ret = sh.TransferSavedSlot(ms, sh.FlipTransfer);
@@ -283,7 +286,8 @@ namespace SmartCursor
             pipetteRule.Run(matchers, null, block, null, null);
 
             var ms = sh.PushItem(matchers, null);
-            if (ms == null) {
+            if (ms == null)
+            {
                 return false;
             }
             return sh.TransferSavedSlot(ms, sh.FlipTransfer);
@@ -293,7 +297,7 @@ namespace SmartCursor
 
         private void UnregisterSmartToolStopListListener()
         {
-G            if (listener >= 0)
+            if (listener >= 0)
             {
                 capi.Event.UnregisterGameTickListener(listener);
                 listener = -1;
@@ -302,7 +306,8 @@ G            if (listener >= 0)
         private void PopTool()
         {
             state.Lock();
-            try {
+            try
+            {
                 if (isSmartToolHeld)
                 {
                     isSmartToolHeld = false;
@@ -319,35 +324,36 @@ G            if (listener >= 0)
 
         private void StartSmartCursor(bool mode)
         {
- #if DEBUG
-             BlockSelection bs = capi.World.Player.CurrentBlockSelection;
-             var es = capi.World.Player.CurrentEntitySelection?.Entity;
-             if (bs != null)
-             {
-                 Block block = capi.World.BlockAccessor.GetBlock(bs.Position);
-                 SmartCursorUtils.Log(capi, $"Target block code {block?.Code}");
-             }
-             if (es != null) {
-                 SmartCursorUtils.Log(capi,
-                     $"Entity: {es.Code}, " +
-                     $"Type: {es.GetType().FullName}, " +
-                     $"Id: {es.EntityId}"
-                 );
-             }
-             SmartCursorUtils.ShowHeldItemCode(capi);
- #endif
-             isToggleMode = mode;
-             if (!isSmartToolHeld)
-             {
-                 UnregisterSmartToolStopListListener();
-                 listener = capi.Event.RegisterGameTickListener(SmartToolStopListListener, 100);
-                 isSmartToolHeld = PushItem();
-             }
-             else if (isToggleMode)
-             {
-                 PopTool();
-                 UnregisterSmartToolStopListListener();
-             }
+#if DEBUG
+            BlockSelection bs = capi.World.Player.CurrentBlockSelection;
+            var es = capi.World.Player.CurrentEntitySelection?.Entity;
+            if (bs != null)
+            {
+                Block block = capi.World.BlockAccessor.GetBlock(bs.Position);
+                SmartCursorUtils.Log(capi, $"Target block code {block?.Code}");
+            }
+            if (es != null)
+            {
+                SmartCursorUtils.Log(capi,
+                    $"Entity: {es.Code}, " +
+                    $"Type: {es.GetType().FullName}, " +
+                    $"Id: {es.EntityId}"
+                );
+            }
+            SmartCursorUtils.ShowHeldItemCode(capi);
+#endif
+            isToggleMode = mode;
+            if (!isSmartToolHeld)
+            {
+                UnregisterSmartToolStopListListener();
+                listener = capi.Event.RegisterGameTickListener(SmartToolStopListListener, 100);
+                isSmartToolHeld = PushItem();
+            }
+            else if (isToggleMode)
+            {
+                PopTool();
+                UnregisterSmartToolStopListListener();
+            }
         }
 
         private void StartPipette()

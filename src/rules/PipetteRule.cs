@@ -13,7 +13,8 @@ namespace SmartCursor
                                  ItemStack item)
         {
             var path = block?.Code?.Path;
-            if (path != null) {
+            if (path != null)
+            {
                 matchers.Add(new ItemCodeMatcher(path));
             }
         }

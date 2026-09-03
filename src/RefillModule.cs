@@ -31,10 +31,12 @@ namespace SmartCursor
             return false;
         }
 
-        bool MouseLock() {
+        bool MouseLock()
+        {
             var invMgr = capi.World.Player.InventoryManager;
             bool dragging = invMgr.MouseItemSlot != null && !invMgr.MouseItemSlot.Empty;
-            if (dragging) {
+            if (dragging)
+            {
                 return true;
             }
             // TODO i need to choose betwen both and maybe add lock timer
@@ -47,7 +49,8 @@ namespace SmartCursor
         // refill seems to works ok
         void OnPollTick(float dt)
         {
-            if (state.lockInv) {
+            if (state.lockInv)
+            {
                 return;
             }
             if (capi.World?.Player == null)
@@ -66,7 +69,8 @@ namespace SmartCursor
                 var prev = prevSnapshot[i];
 
                 // prev exist so was not empty and is a stackable item
-                if (prev != null && (prev?.Collectible?.MaxStackSize ?? 0) > 1) {
+                if (prev != null && (prev?.Collectible?.MaxStackSize ?? 0) > 1)
+                {
                     // TODO some item get taken 2 by to or one by one
                     // bool isEmpty = cur == null || slot.StackSize <= 0;
                     // here choosing 1 for isempty mean when  there's still one item
@@ -103,7 +107,8 @@ namespace SmartCursor
                     List<ItemMatcher> matchers = new List<ItemMatcher>();
                     matchers.Add(new ItemCodeMatcher(path));
                     var ms = sh.PushItem(matchers, state.config.itemBlackList, SlotHandlerCurrentSlotMethod.Ignore);
-                    if (ms != null) {
+                    if (ms != null)
+                    {
                         sh.TransferSavedSlot(ms, sh.TransferToTransfer);
                     }
                     // capi.ShowChatMessage($"Last Item was {itemToRefill?.Code?.Path}");
@@ -128,9 +133,11 @@ namespace SmartCursor
             sh = new SlotHandler(capi, state);
             capi.Event.PlayerEntitySpawn += OnPlayerSpawn;
         }
-        public void Dispose() {
+        public void Dispose()
+        {
             capi.Event.PlayerEntitySpawn -= OnPlayerSpawn;
-            if (tickListenerId >= 0) {
+            if (tickListenerId >= 0)
+            {
                 capi.Event.UnregisterGameTickListener(tickListenerId);
                 tickListenerId = -1;
             }
