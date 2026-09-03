@@ -6,24 +6,18 @@ using Vintagestory.Client.NoObf;
 
 namespace SmartCursor
 {
-
-    public static class UseFlag
-    {
-        public static bool selfActionInProgress; // true only while OUR bag-put or pump code runs
-    }
-
+    [ModModule]
     public class RefillModule : IModModule
     {
         private ICoreClientAPI capi;
         private ModStateManager state;
         private SlotHandler sh;
 
-        private long lockedAt;
         private const int GRACE_PERIOS_MS = 200;
 
         private ItemStack[] prevSnapshot = new ItemStack[10];
         private int prevActiveSlot = -1;
-        private long tickListenerId;
+        private long tickListenerId = -1;
 
         bool IsInventoryOpen()
         {
@@ -37,18 +31,29 @@ namespace SmartCursor
             return false;
         }
 
+        bool MouseLock() {
+            var invMgr = capi.World.Player.InventoryManager;
+            bool dragging = invMgr.MouseItemSlot != null && !invMgr.MouseItemSlot.Empty;
+            if (dragging) {
+                return true;
+            }
+            // TODO i need to choose betwen both and maybe add lock timer
+            ItemSlot currentSlot = invMgr.CurrentHoveredSlot;
+            return currentSlot != null;
+        }
+
         // I don't really like this but until i found reliable way
         // to get inventory event polltick is completely debunced and
         // refill seems to works ok
         void OnPollTick(float dt)
         {
-            if (UseFlag.selfActionInProgress)
+            if (state.lockInv) {
                 return;
+            }
             if (capi.World?.Player == null)
                 return;
 
             var invMgr = capi.World.Player.InventoryManager;
-            bool dragging = invMgr.MouseItemSlot != null && !invMgr.MouseItemSlot.Empty;
 
             var hotbar = invMgr.GetHotbarInventory();
             int active = invMgr.ActiveHotbarSlotNumber;
@@ -66,19 +71,14 @@ namespace SmartCursor
                     // bool isEmpty = cur == null || slot.StackSize <= 0;
                     // here choosing 1 for isempty mean when  there's still one item
                     // the refill kicks in
-                    bool becameEmpty = cur == null || slot.StackSize <= 1;
+                    bool becameEmpty = cur == null || (slot.StackSize <= 1 && prev.StackSize > slot.StackSize);
 
-                    bool eligible = becameEmpty && i == active && activeSlotStable && !dragging && !IsInventoryOpen();
+                    bool eligible = becameEmpty && i == active && activeSlotStable && !MouseLock() && !IsInventoryOpen();
 
                     if (eligible && prev.Collectible.MaxStackSize > 1)
                     {
-
-                        var elapsed = capi.World.ElapsedMilliseconds - lockedAt;
-                        if (state.Lock)
-                        {
-                            lockedAt = capi.World.ElapsedMilliseconds;
-                        }
-                        else if (elapsed > GRACE_PERIOS_MS)
+                        var elapsed = capi.World.ElapsedMilliseconds - state.unlockAt;
+                        if (!state.lockInv && elapsed > GRACE_PERIOS_MS)
                         {
                             RunPumpLogic(i, prev.Collectible);
                         }
@@ -94,7 +94,7 @@ namespace SmartCursor
 
         void RunPumpLogic(int slotIndex, CollectibleObject itemToRefill)
         {
-            UseFlag.selfActionInProgress = true;
+            state.Lock();
             try
             {
                 string path = itemToRefill?.Code?.Path;
@@ -111,7 +111,8 @@ namespace SmartCursor
             }
             finally
             {
-                UseFlag.selfActionInProgress = false;
+                // TODO log error
+                state.Unlock();
             }
         }
 
@@ -126,6 +127,13 @@ namespace SmartCursor
             state = stateManager;
             sh = new SlotHandler(capi, state);
             capi.Event.PlayerEntitySpawn += OnPlayerSpawn;
+        }
+        public void Dispose() {
+            capi.Event.PlayerEntitySpawn -= OnPlayerSpawn;
+            if (tickListenerId >= 0) {
+                capi.Event.UnregisterGameTickListener(tickListenerId);
+                tickListenerId = -1;
+            }
         }
     }
 }

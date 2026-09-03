@@ -5,6 +5,7 @@ using Vintagestory.API.Config;
 namespace SmartCursor
 {
 
+    [ModModule]
     public class TransferAwayModule : IModModule
     {
         private ICoreClientAPI capi;
@@ -12,9 +13,9 @@ namespace SmartCursor
 
         private bool OnPutInBagHotkeyPressed(KeyCombination keyComb)
         {
-            state.Lock = true;
+            state.Lock();
             PutItemInInventory(capi.World.Player.InventoryManager.ActiveHotbarSlot);
-            state.Lock = false;
+            state.Unlock();
             return true;
         }
 

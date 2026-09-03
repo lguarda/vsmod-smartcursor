@@ -10,6 +10,7 @@ using Vintagestory.API.MathTools;
 namespace SmartCursor
 {
 
+    [ModModule]
     public class SmartCursorModule : IModModule
     {
 
@@ -46,6 +47,9 @@ namespace SmartCursor
             }
         }
 
+        public void Dispose() {
+            UnregisterSmartToolStopListListener();
+        }
         public void Initialize(ICoreClientAPI api, ModStateManager stateManager)
         {
             isSmartToolHeld = false;
@@ -250,12 +254,22 @@ namespace SmartCursor
 
         private bool PushItem()
         {
-            List<ItemMatcher> matchers = BuildMatcherList(rules);
-            var ms = sh.PushItem(matchers, state.config.itemBlackList);
-            if (ms == null) {
-                return false;
+            bool ret = false;
+            state.Lock();
+            try {
+                List<ItemMatcher> matchers = BuildMatcherList(rules);
+                var ms = sh.PushItem(matchers, state.config.itemBlackList);
+                if (ms == null) {
+                    return false;
+                }
+                ret = sh.TransferSavedSlot(ms, sh.FlipTransfer);
             }
-            return sh.TransferSavedSlot(ms, sh.FlipTransfer);
+            finally
+            {
+                // TODO log error
+                state.Unlock();
+            }
+            return ret;
         }
 
         private bool Pipette()
@@ -279,7 +293,7 @@ namespace SmartCursor
 
         private void UnregisterSmartToolStopListListener()
         {
-            if (listener >= 0)
+G            if (listener >= 0)
             {
                 capi.Event.UnregisterGameTickListener(listener);
                 listener = -1;
@@ -287,10 +301,18 @@ namespace SmartCursor
         }
         private void PopTool()
         {
-            if (isSmartToolHeld)
+            state.Lock();
+            try {
+                if (isSmartToolHeld)
+                {
+                    isSmartToolHeld = false;
+                    sh.TransferSavedSlot(sh.FlipTransfer);
+                }
+            }
+            finally
             {
-                isSmartToolHeld = false;
-                sh.TransferSavedSlot(sh.FlipTransfer);
+                // TODO log error
+                state.Unlock();
             }
         }
 
