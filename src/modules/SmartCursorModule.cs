@@ -277,6 +277,7 @@ namespace SmartCursor
 
         private bool Pipette()
         {
+            state.Lock();
             List<ItemMatcher> matchers = new List<ItemMatcher>();
             AbstractRule pipetteRule = new PipetteRule(state.config, capi);
 
@@ -286,11 +287,13 @@ namespace SmartCursor
             pipetteRule.Run(matchers, null, block, null, null);
 
             var ms = sh.PushItem(matchers, null);
-            if (ms == null)
+            bool itemHeld = false;
+            if (ms != null)
             {
-                return false;
+                itemHeld = sh.TransferSavedSlot(ms, sh.FlipTransfer);
             }
-            return sh.TransferSavedSlot(ms, sh.FlipTransfer);
+            state.Unlock();
+            return itemHeld;
         }
 
 
@@ -363,9 +366,10 @@ namespace SmartCursor
             if (isSmartToolHeld)
             {
                 PopTool();
+            } else {
+                listener = capi.Event.RegisterGameTickListener(SmartToolStopListListener, 100);
+                isSmartToolHeld = Pipette();
             }
-            listener = capi.Event.RegisterGameTickListener(SmartToolStopListListener, 100);
-            isSmartToolHeld = Pipette();
         }
     }
 }

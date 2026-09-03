@@ -50,7 +50,7 @@ namespace SmartCursor
         void OnPollTick(float dt)
         {
             if (!state.config.slotRefill) {
-                Dispose()
+                Dispose();
                 return;
             }
             if (state.lockInv)
