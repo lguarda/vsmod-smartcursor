@@ -47,6 +47,7 @@ namespace SmartCursor
         // I don't really like this but until i found reliable way
         // to get inventory event polltick is completely debunced and
         // refill seems to works ok
+        /*
         void OnPollTick(float dt)
         {
             if (!state.config.slotRefill) {
@@ -99,6 +100,69 @@ namespace SmartCursor
 
             prevActiveSlot = active;
         }
+        */
+        void OnPollTick(float dt)
+        {
+            if (!state.config.slotRefill)
+            {
+                Dispose();
+                return;
+            }
+            if (state.lockInv) return;
+            if (capi.World?.Player == null) return;
+
+            var invMgr = capi.World.Player.InventoryManager;
+            var hotbar = invMgr.GetHotbarInventory();
+            int active = invMgr.ActiveHotbarSlotNumber;
+            bool activeSlotStable = active == prevActiveSlot;
+
+            for (int i = 0; i < 10; i++)
+            {
+                ProcessSlot(hotbar[i], i, active, activeSlotStable);
+            }
+
+            prevActiveSlot = active;
+        }
+
+        void ProcessSlot(ItemSlot slot, int index, int activeSlot, bool activeSlotStable)
+        {
+            var cur = slot.Itemstack;
+            var prev = prevSnapshot[index];
+
+            if (activeSlotStable && IsStackableCollectible(prev))
+            {
+                bool becameEmpty = HasBecomeEmpty(slot, cur, prev);
+                bool eligible = becameEmpty && index == activeSlot
+                                && !MouseLock() && !IsInventoryOpen();
+
+                if (eligible && prev.Collectible.MaxStackSize > 1 && IsGracePeriodElapsed())
+                {
+                    RunPumpLogic(index, prev.Collectible);
+                }
+            }
+
+            // always update, regardless of drag/active state, so tracking stays accurate
+            prevSnapshot[index] = cur;
+        }
+
+        bool IsStackableCollectible(ItemStack prev)
+        {
+            return prev != null && (prev?.Collectible?.MaxStackSize ?? 0) > 1;
+        }
+
+        bool HasBecomeEmpty(ItemSlot slot, ItemStack cur, ItemStack prev)
+        {
+            // TODO some item get taken 2 by 2 or one by one
+            // here choosing 1 for isEmpty means when there's still one item
+            // the refill kicks in
+            return cur == null || (slot.StackSize <= 1 && prev.StackSize > slot.StackSize);
+        }
+
+        bool IsGracePeriodElapsed()
+        {
+            var elapsed = capi.World.ElapsedMilliseconds - state.unlockAt;
+            return !state.lockInv && elapsed > GRACE_PERIOS_MS;
+        }
 
         void RunPumpLogic(int slotIndex, CollectibleObject itemToRefill)
         {
@@ -125,16 +189,31 @@ namespace SmartCursor
             }
         }
 
+        private void HotKeyListener(string hotkeycode, KeyCombination keyComb)
+        {
+            switch (hotkeycode)
+            {
+                case "dropitem":
+                case "dropitems":
+                    capi.ShowChatMessage($"OMG");
+                    state.Unlock();
+                    break;
+            }
+        }
+
         public void Initialize(ICoreClientAPI api, ModStateManager stateManager)
         {
             capi = api;
             state = stateManager;
-            if (!state.config.slotRefill) {
-                return ;
+            if (!state.config.slotRefill)
+            {
+                return;
             }
             sh = new SlotHandler(capi, state);
             tickListenerId = capi.Event.RegisterGameTickListener(OnPollTick, 100);
+            capi.Input.AddHotkeyListener(HotKeyListener);
         }
+
         public void Dispose()
         {
             if (tickListenerId >= 0)
@@ -143,5 +222,6 @@ namespace SmartCursor
                 tickListenerId = -1;
             }
         }
+
     }
 }

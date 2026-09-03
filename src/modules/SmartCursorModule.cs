@@ -366,7 +366,9 @@ namespace SmartCursor
             if (isSmartToolHeld)
             {
                 PopTool();
-            } else {
+            }
+            else
+            {
                 listener = capi.Event.RegisterGameTickListener(SmartToolStopListListener, 100);
                 isSmartToolHeld = Pipette();
             }

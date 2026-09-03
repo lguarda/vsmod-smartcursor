@@ -2,8 +2,22 @@
 
 # SmartCursor Vs mod
 This is a Vintagestory client side mode which aim to implement the smart cursor feature from Terraria (In Terraria it's actually named smart cursor)
+There's multiple "module" within this mod
+- smartcuror (the original terraria idea)
+- slot refill (idea from part of Jeb's Inventory Tweaks https://mods.vintagestory.at/jebsit)
+- transfer away (and Put it in the bag https://mods.vintagestory.at/show/mod/31020)
 
-# How it Works
+So slot refill part will refill your hotbar with stuff from your inventory, like you put block on the floor it ran out on active slot, slot refill will look at you other slot to refill your current one with same item.
+then transfer away add hot key to put active slot item in your bag.
+Those two module can be enabled in `smartcursor.json` by setting those to true
+- putitinthebag
+- slotRefill
+And for the WHY did i shamelessly copy some mod's behavior, is firstly because those two other mod don't work well together but worst
+they don't work well with mine.
+Secondly because i can't live without those.
+Thirdly they kind of already fit the purpose of my own mod, at least for the refill part.
+
+# How smartcursor module works
 SmartCursor automatically selects the most appropriate tool(or item) based on what you are looking at.
 
 When the keybind is pressed, the mod analyzes:
@@ -54,22 +68,29 @@ Based on this analysis, it determines the preferred tool
 - A `smartcursor.json` file is created in `VintagestoryData/ModConfig`
 - Behavior such as continuous updating and tool priorities can be customized
 
+### Extended rules
+configurable with field `extendedRule` in `smartcursor.json`
+Smartcursor is controlled by different rules within src/rules/
+Those one was the original rule when i release the mode so there are just always turned ON
+- ToolRule.cs (find tool, like shovel if you look a dirt)
+- ClayFormingRule.cs (find matching clay when looking at clay forming)
+- LiveEntityRule.cs (find the knife when looking at dead corps)
+Then extendedRule which is ON by default will add:
+- BloomeryRule.cs (based current bloomery state, sequentially find nuggets, fuel, torch)
+- CrockRule.cs (find beewax or bowl)
+- PitKilnRule.cs (based current pitkiln state, sequentially find drygrass, stick fuel, torch)
+- TorchRule.cs (looking at unlit torch will bring at lit torch)
+- TroughRule.cs (find grain or mash to put into trough)
+- PipetteRule.cs (find same item you are looking this one has it's own configurable keybind)
+
 
 ### Current status
 This mod is experimental.
 The current state is **"it works for me"** — use at your own risk.
 
-# Todo
-- Support block rotation for smart placement
-- Support placement block downward
-- Add other type of swap (ex: like for the worked clay which spawn)
-
 # Build & run
-Why scons? the dotnet echo system looks like really windows specific
-    .1 i don't have windows
-    .2 i don't know how the mod building works, i simply copy paste the example from https://github.com/anegostudios/vsmodtemplate
-
-So it's built like this:
+first I'm pretty sure this doesn't work on windows yet
+It's built like this:
 
     # This need to be ran only once
     scons VINTAGE_STORY=$(realpath <path to vs>) VINTAGE_STORY_DATA=$(realpath <your vs data location>)
@@ -80,9 +101,13 @@ So it's built like this:
     scons install run
     scons # or simply scons for build only
 
+# Format
+    scons fmt
 
-# Analyze
-Don't forget to install roslynator first
+# Test
+Build vsqa
 
-    dotnet tool install -g roslynator.dotnet.cli
-    scons analyze
+    scons vsqa run
+
+then In game type /runtests
+
